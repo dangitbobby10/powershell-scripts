@@ -1,4 +1,4 @@
-﻿# Written by: Robert Van Pay -- if you encounter any anomalies please feel free to reach out.
+# Written by: Robert Van Pay -- if you encounter any anomalies please feel free to reach out.
 # This script will record a user's current data, export it to CSV, and perform actions to Offboard the user.
 #####################################################################################################################################################################
 #   ___ _             _    ___                     _   _     _   ___    __       __  __ ___ ____  __ ___    ___   __  __ _                      _ _             ___         _      _   
@@ -359,21 +359,6 @@ function Add-InputField {
     Set-ADUser -Identity $username –Replace @{msExchHideFromAddressLists=$true} –Server $domainController
     Write-Host "$username's account has been hidden from the GAL" -ForegroundColor Green
 #--------------------------------------------------------------------------------------------------------------
-# Move User to Disabled Users (or specified) OU
-    try {
-    # Attempt to retrieve the user from AD
-        $user = Get-ADUser -Identity $username -ErrorAction Stop
-
-    # Move the user to the specified OU
-        Move-ADObject -Identity $user.DistinguishedName -TargetPath $ou_path -ErrorAction Stop
-        Write-Host "$username's AD Account has been moved to '$ou'" -ForegroundColor Green
-    }
-    
-    catch {
-    # Handle errors, such as user not found or lack of permissions
-        Write-Host "Error: Unable to move $username to '$ou'. Details: $_" -ForegroundColor Red
-    }
-#--------------------------------------------------------------------------------------------------------------
 # Update User's AD DisplayName
 
 # Get the user's current display name and full name
@@ -388,12 +373,33 @@ function Add-InputField {
     Write-Host "$username's AD Display Name has been updated to:" -ForegroundColor Green
     Write-Host "$newDisplayName" -ForegroundColor Yellow
 #--------------------------------------------------------------------------------------------------------------
+# Run a Delta Sync to sync the changes to MS365 - this is so when the account becomes a cloud account, attributes in AD that were just updated are synced over.
+    Invoke-Command –ComputerName $AADSyncServer –ScriptBlock {Start-ADSyncSyncCycle –PolicyType Delta}       
+#--------------------------------------------------------------------------------------------------------------
+# Move User to Disabled Users (or specified) OU
+    try {
+    # Attempt to retrieve the user from AD
+        $user = Get-ADUser -Identity $username -ErrorAction Stop
+
+    # Move the user to the specified OU
+        Move-ADObject -Identity $user.DistinguishedName -TargetPath $ou_path -ErrorAction Stop
+        Write-Host "$username's AD Account has been moved to '$ou'" -ForegroundColor Green
+
+    # Pausing Script for 10 seconds. We just ran AADsync a moment ago and I want the system to catch up before AADsync is ran again.
+        start-sleep 10
+    }
+    
+    catch {
+    # Handle errors, such as user not found or lack of permissions
+        Write-Host "Error: Unable to move $username to '$ou'. Details: $_" -ForegroundColor Red
+    }
+#--------------------------------------------------------------------------------------------------------------
 
 ###############################################################################################################
 # Run AADConnect Sync (Delta Sync) and wait for 2 minutes
 ###############################################################################################################
 #--------------------------------------------------------------------------------------------------------------
-# Run a Delta Sync to sync the changes to MS365
+# Run a Delta Sync to sync the changes to MS365.
     Write-Host "AADSync Command has been Executed - Standby..." -ForegroundColor Cyan
     Invoke-Command –ComputerName $AADSyncServer –ScriptBlock {Start-ADSyncSyncCycle –PolicyType Delta}
 
