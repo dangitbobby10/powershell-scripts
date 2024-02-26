@@ -11,9 +11,9 @@ https://learn.microsoft.com/en-us/entra/identity/users/licensing-service-plan-re
 #>
 
 $LicenseFriendlyNames = @{
-    "AAD_PREMIUM" = "Azure Active Directory Premium P1"
+	"AAD_PREMIUM" = "Azure Active Directory Premium P1"
 	"AAD_PREMIUM_P2" = "Azure Active Directory Premium P2"
-    "EMS" = "Enterprise Mobility + Security E3"
+	"EMS" = "Enterprise Mobility + Security E3"
 	"EXCHANGEARCHIVE_ADDON" = "Exchange Online Archiving for Exchange Online"
 	"INTUNE_A" = "Intune"
 	"MCOMEETADV" = "Microsoft 365 Audio Conferencing"
