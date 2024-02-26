@@ -1,46 +1,35 @@
-﻿# Written by: Robert Van Pay -- if you encounter any anomalies please feel free to reach out.
-# This script will record a user's current data, export it to CSV, and perform actions to Offboard the user.
-#####################################################################################################################################################################
-#  ___     _ _    ___  _   _   ___              _     _   ___    __       __  __ ___ ____  __ ___    ___   __  __ _                      _ _             ___         _      _   
-# | __|  _| | |  / _ \| | | | / __|_  _ _ _  __(_)   /_\ |   \  / _|___  |  \/  / __|__ / / /| __|  / _ \ / _|/ _| |__  ___  __ _ _ _ __| (_)_ _  __ _  / __| __ _ _(_)_ __| |_ 
-# | _| || | | | | (_) | |_| | \__ \ || | ' \/ _|_   / _ \| |) | > _|_ _| | |\/| \__ \|_ \/ _ \__ \ | (_) |  _|  _| '_ \/ _ \/ _` | '_/ _` | | ' \/ _` | \__ \/ _| '_| | '_ \  _|
-# |_| \_,_|_|_|  \___/ \___/  |___/\_, |_||_\__(_) /_/ \_\___/  \_____|  |_|  |_|___/___/\___/___/  \___/|_| |_| |_.__/\___/\__,_|_| \__,_|_|_||_\__, | |___/\__|_| |_| .__/\__|
-#                                  |__/                                                                                                          |___/                |_|       
-#####################################################################################################################################################################
-#  __       ___       ___  __           __   ___  __             ___  __      __   __     __   __     ___  __      __   ___  ___  __   __        __   __          __  
-# / _`  /\   |  |__| |__  |__)    |  | /__` |__  |__)    | |\ | |__  /  \    |__) |__) | /  \ |__)     |  /  \    /  \ |__  |__  |__) /  \  /\  |__) |  \ | |\ | / _` 
-# \__> /~~\  |  |  | |___ |  \    \__/ .__/ |___ |  \    | | \| |    \__/    |    |  \ | \__/ |  \     |  \__/    \__/ |    |    |__) \__/ /~~\ |  \ |__/ | | \| \__> 
-#                                                                                                                                                                
-#####################################################################################################################################################################
+﻿# Written by dangitbobby10
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █  ___     _ _    ___  _   _   ___              _     _   ___    __       __  __ ___ ____  __ ___    ___   __  __ _                      _ _             ___         _      _     █
+#   █ | __|  _| | |  / _ \| | | | / __|_  _ _ _  __(_)   /_\ |   \  / _|___  |  \/  / __|__ / / /| __|  / _ \ / _|/ _| |__  ___  __ _ _ _ __| (_)_ _  __ _  / __| __ _ _(_)_ __| |_   █
+#   █ | _| || | | | | (_) | |_| | \__ \ || | ' \/ _|_   / _ \| |) | > _|_ _| | |\/| \__ \|_ \/ _ \__ \ | (_) |  _|  _| '_ \/ _ \/ _` | '_/ _` | | ' \/ _` | \__ \/ _| '_| | '_ \  _|  █
+#   █ |_| \_,_|_|_|  \___/ \___/  |___/\_, |_||_\__(_) /_/ \_\___/  \_____|  |_|  |_|___/___/\___/___/  \___/|_| |_| |_.__/\___/\__,_|_| \__,_|_|_||_\__, | |___/\__|_| |_| .__/\__|  █
+#   █                                  |__/                                                                                                          |___/                |_|         █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █  __       ___       ___  __           __   ___  __             ___  __      __   __     __   __     ___  __      __   ___  ___  __   __        __   __          __              █
+#   █ / _`  /\   |  |__| |__  |__)    |  | /__` |__  |__)    | |\ | |__  /  \    |__) |__) | /  \ |__)     |  /  \    /  \ |__  |__  |__) /  \  /\  |__) |  \ | |\ | / _`             █
+#   █ \__> /~~\  |  |  | |___ |  \    \__/ .__/ |___ |  \    | | \| |    \__/    |    |  \ | \__/ |  \     |  \__/    \__/ |    |    |__) \__/ /~~\ |  \ |__/ | | \| \__>             █
+#   █                                                                                                                                                                                 █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#--------------------------------------------------------------------------------------------------------------
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █ Key Defined Variables: █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-###############################################################################################################
-# Connect to Required MS365 Modules and Import the AD PS Module
-###############################################################################################################
-#--------------------------------------------------------------------------------------------------------------
-    Write-Host "Connecting to MS365 -- you will be asked to log in x3 times." -ForegroundColor Cyan
-    Connect-MsolService
-    Connect-ExchangeOnline
-    Connect-AzureAD
-#--------------------------------------------------------------------------------------------------------------
-# Import the Active Directory module
-    Write-Host "Importing Active Directory Module -- Standby..." -ForegroundColor Cyan
-    Import-Module ActiveDirectory
-###############################################################################################################
-# Create Loop Point. When the script completes - it'll ask if another user needs to be offboareded. By doing 
-# it this way, the script will skip reconnecting to the MS365/Azure Modules
-###############################################################################################################
-    function OffboardUser {
-    Remove-Variable * -ErrorAction SilentlyContinue
-
-###############################################################################################################
-# Key Defined Variables:
-###############################################################################################################
-#--------------------------------------------------------------------------------------------------------------
-# Define the domain controller to connect to
+# Define the domain controller
     $domainController = #"primaryDC.contoso.com"
 
-# Define the server with AADSync
+# Define the (primary not staging) AADConnect Server
     $AADSyncServer = #"aadsync.contoso.com"
+
+# Define the server FileServer
+    $FileServer = #"fileserver.contoso.com"
+
+# Define the 'Offboarded Users' folder on the Folder server
+    $fs_offboardFolder = #"E:\shares\secureOffboardLocation"
+
+# Define the User's HomeDirectory
+    #$manual_homedirectory = #"E:\shares\user home folders\user's folder"
 
 # Define "Disabled Users" OU
     $ou_path = #"OU=Disabled Users,DC=contoso,DC=com"
@@ -52,19 +41,37 @@
     $date = Get-Date -Format "MM-dd-yyyy"
 
 # Define the path to the CSV file
-    #only change the value insde " ". Be sure to keep { } intact as it is used later as a script block IF you have $username in the filepath.
+    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block IF you have $username in the filepath.)
     $csvFilePath = { "c:\users\$env:username\desktop\Offboarding - $username $date.csv" }
 #--------------------------------------------------------------------------------------------------------------
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+#   ♠ Connect to Required MS365 Modules and Import the AD PS Module ♠
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+#--------------------------------------------------------------------------------------------------------------
+    Write-Host "Connecting to MS365 -- you will be asked to log in x3 times." -ForegroundColor Cyan
+    Connect-MsolService
+    Connect-ExchangeOnline
+    Connect-AzureAD
+#--------------------------------------------------------------------------------------------------------------
+# Import the Active Directory module
+    Write-Host "Importing Active Directory Module -- Standby..." -ForegroundColor Cyan
+    Import-Module ActiveDirectory
+#   ♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦
+#   ♦ Create Loop Point. When the script completes - it'll ask if another user needs to be offboareded. By doing   ♦
+#   ♦ it this way, the script will skip reconnecting to the MS365/Azure Modules                                    ♦
+#   ♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦
+    function OffboardUser {
+        # Define the variables to Keep
+            $var_exclude = @('domainController', 'AADSyncServer', 'ou_path', 'LicenseFriendlyNamesScript', 'date', 'csvFilePath')
+        
+        # Get all variable names except for the ones to exclude
+            $varsToRemove = Get-Variable | Where-Object { $var_exclude -notcontains $_.Name } | Select-Object -ExpandProperty Name 
 
-###############################################################################################################
-# Intial Active Directory Variables and Functions
-###############################################################################################################
-#--------------------------------------------------------------------------------------------------------------
-# Connect to the specific domain controller's Active Directory module
-    Write-Host "Connecting to Domain Controller -- Standby..." -ForegroundColor Cyan
-    $domainControllerSession = New-PSSession -ComputerName $domainController
-    Import-PSSession $domainControllerSession -Module ActiveDirectory -AllowClobber
-#--------------------------------------------------------------------------------------------------------------
+        # Remove the variables
+            Remove-Variable -Name $varsToRemove -ErrorAction SilentlyContinue
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+#   ♠ Prompts Script Executor for the user being offboarded + forwarder, delegates, sendas, and Out-of-Office Reply. ♠
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.Application]::EnableVisualStyles()
 
@@ -170,11 +177,13 @@ function Add-InputField {
 #--------------------------------------------------------------------------------------------------------------
 # Get the user's current AD information ready for CSV Export
     Write-Host "Preparing CSV Export of User's Current Configs -- Standby..." -ForegroundColor Cyan
-    $user = Get-ADUser -Identity $username -Properties Description, IPPhone, MemberOf, mail, UserPrincipalName, DistinguishedName -Server $domainController
+    $user = Get-ADUser -Identity $username -Properties Description, IPPhone, MemberOf, mail, UserPrincipalName, DistinguishedName, homedirectory, homedrive -Server $domainController
     $description = $user.Description
     $ipPhone = $user.IPPhone
     $email = $user.mail
     $upn = $user.UserPrincipalName
+    $homedrive = $user.homedrive
+    $homedirectory = $user.homedirectory
     $groups = $user.MemberOf | ForEach-Object {(Get-ADGroup -Identity $_).Name} # Safeguard against null values
     if ([string]::IsNullOrEmpty($ipPhone)) {
         $ipPhone = "No IP Phone Recorded at time of Offboarding"
@@ -192,18 +201,17 @@ function Add-InputField {
     $mailboxStats = Get-MailboxStatistics -Identity $upn
     $AADUsername = Get-AzureADUser -Filter "UserPrincipalName eq '$upn'"
 #--------------------------------------------------------------------------------------------------------------
-
-###############################################################################################################
-# MS365/AAD Variables and Functions
-###############################################################################################################
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+#   ♠ MS365/AAD Variables and Functions ♠
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #--------------------------------------------------------------------------------------------------------------
-# Create hashtable to store the upcoming properties
+# Create hashtable to store upcoming properties
     $properties = @{}
 #--------------------------------------------------------------------------------------------------------------
 # Import 'LicenseFriendlyNamesScript' for the MS365 Licenses. Reads as the actual license rather than the SKU.
     . $LicenseFriendlyNamesScript
 
-# Join friendly license names and add to properties hashtable
+# Join friendly license names and add to $Properties hashtable
     $properties['Licenses'] = $friendlyLicenseNames -join ", "
 #--------------------------------------------------------------------------------------------------------------
 # Check if mailbox is at or over 50GB
@@ -218,20 +226,6 @@ function Add-InputField {
 #--------------------------------------------------------------------------------------------------------------
 # Check if in-place archive is enabled
     $isInPlaceArchiveEnabled = $mailbox.ArchiveStatus -eq "Active"
-
-    <# ►►Not needed anymore - converting to shared mailbox regardless of Mailbox Size/In-Place Archive Status. Below was my attempt to get it to work but I couldn't
-
-    # Check if Mailbox is over 50GB and/or has In-Place Archive Enabled. Export CSV whether the account will be converted or not
-    if ($isMailboxOver50GB -and $isInPlaceArchiveEnabled) {
-        $properties["Mailbox Conversion to Shared"] = "Mailbox is too Large & has In-Place Archive Enabled. Cannot Convert"
-    } elseif ($isMailboxOver50GB) {
-        $properties["Mailbox Conversion to Shared"] = "Mailbox is too large to Convert"
-    } elseif ($isInPlaceArchiveEnabled) {
-        $properties["Mailbox Conversion to Shared"] = "Mailbox has In-Place Archive Enabled, Cannot Convert"
-    } else {
-        $properties["Mailbox Conversion to Shared"] = "Mailbox will be Converted to Shared"
-    }
-    #>
 #--------------------------------------------------------------------------------------------------------------
 # Get all AD group membership(s)
     $UserGroups = Get-AzureADUser -ObjectId $upn
@@ -284,13 +278,12 @@ function Add-InputField {
     $sendOnBehalf = $mailbox.GrantSendOnBehalfTo | ForEach-Object { (Get-Recipient $_).DisplayName }
     $properties['SendOnBehalf'] = $sendOnBehalf -join ", "
 #--------------------------------------------------------------------------------------------------------------
-
-#####################################################################################################################################################################
-#  ___      __   __   __  ___     __       ___         ___  __      __   __       
-# |__  \_/ |__) /  \ |__)  |     |  \  /\   |   /\      |  /  \    /  ` /__` \  / 
-# |___ / \ |    \__/ |  \  |     |__/ /~~\  |  /~~\     |  \__/    \__, .__/  \/  
-#                                                                                
-#####################################################################################################################################################################
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █  ___      __   __   __  ___     __       ___         ___  __      __   __        █
+#   █ |__  \_/ |__) /  \ |__)  |     |  \  /\   |   /\      |  /  \    /  ` /__` \  /  █
+#   █ |___ / \ |    \__/ |  \  |     |__/ /~~\  |  /~~\     |  \__/    \__, .__/  \/   █
+#   █                                                                                  █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #--------------------------------------------------------------------------------------------------------------
     $finalResult = New-Object PSObject
     $finalResult | Add-Member -MemberType NoteProperty -Name "AD Username" -Value $username
@@ -299,6 +292,8 @@ function Add-InputField {
     $finalResult | Add-Member -MemberType NoteProperty -Name "AD Email" -Value $email
     $finalResult | Add-Member -MemberType NoteProperty -Name "AD UPN" -Value $upn
     $finalResult | Add-Member -MemberType NoteProperty -Name "AD IPPhone" -Value $ipPhone
+    $finalResult | Add-Member -MemberType NoteProperty -Name "Home Drive Mapping" -Value $homedrive
+    $finalResult | Add-Member -MemberType NoteProperty -Name "Home Drive Path" -Value $homedirectory
     $finalResult | Add-Member -MemberType NoteProperty -Name "AD Groups" -Value $groupList
     $finalResult | Add-Member -MemberType NoteProperty -Name "MS365 Groups" -Value $properties['MS365 Groups']
     $finalResult | Add-Member -MemberType NoteProperty -Name "Forwarding To" -Value $properties['Forwarding To']
@@ -312,18 +307,17 @@ function Add-InputField {
     $finalResult | Export-Csv -Path $csvValue -Append -NoTypeInformation
     Write-Host "$username's AD and MS365 data has been recorded to '$csvValue' -- the script will now being the offboarding process" -ForegroundColor Green
 #--------------------------------------------------------------------------------------------------------------
-
-#####################################################################################################################################################################
-#  __   ___  __             __   ___  ___  __   __        __   __          __  
-# |__) |__  / _` | |\ |    /  \ |__  |__  |__) /  \  /\  |__) |  \ | |\ | / _` 
-# |__) |___ \__> | | \|    \__/ |    |    |__) \__/ /~~\ |  \ |__/ | | \| \__> 
-#                                                                              
-#####################################################################################################################################################################
-#       __  ___         ___     __     __   ___  __  ___  __   __      
-#  /\  /  `  |  | \  / |__     |  \ | |__) |__  /  `  |  /  \ |__) \ / 
-# /~~\ \__,  |  |  \/  |___    |__/ | |  \ |___ \__,  |  \__/ |  \  |  
-#                                                                      
-#####################################################################################################################################################################
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █  __   ___  __             __   ___  ___  __   __        __   __          __  █
+#   █ |__) |__  / _` | |\ |    /  \ |__  |__  |__) /  \  /\  |__) |  \ | |\ | / _` █
+#   █ |__) |___ \__> | | \|    \__/ |    |    |__) \__/ /~~\ |  \ |__/ | | \| \__> █
+#   █                                                                              █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █           __  ___         ___     __     __   ___  __  ___  __   __          █
+#   █      /\  /  `  |  | \  / |__     |  \ | |__) |__  /  `  |  /  \ |__) \ /     █
+#   █     /~~\ \__,  |  |  \/  |___    |__/ | |  \ |___ \__,  |  \__/ |  \  |      █
+#   █                                                                              █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #--------------------------------------------------------------------------------------------------------------
 # Disable the AD account
     Disable-ADAccount -Identity $username -Server $domainController
@@ -335,6 +329,50 @@ function Add-InputField {
     Set-ADAccountPassword -Identity $username -NewPassword (ConvertTo-SecureString -AsPlainText $password -Force) -Server $domainController
     Write-Host "$username's password has been set to:" -ForegroundColor Green
     Write-Host "$password" -ForegroundColor Yellow
+#--------------------------------------------------------------------------------------------------------------
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+#   ♠ Transfer User's Home Directory to the "Offboarded Users" folder on the File Server ♠
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+# Initialize job started flag -- this is so if you don't want to transfer any files, the script will know and won't perform the final checks to determine if the tranfer job completed.
+    $fs_jobStarted = $false
+
+# Determine which home directory to use. If $manual_homedirectory is null - the script will use the $homedirectory path.
+    $effective_homedirectory = if (-not [string]::IsNullOrWhiteSpace($manual_homedirectory)) {
+        $manual_homedirectory
+    } else {
+        $homedirectory
+    }
+
+# Check if both $manual_homedirectory and $homedirectory are null or blank. Will not perform data transfer if both variables are blank.
+    if (-not [string]::IsNullOrWhiteSpace($effective_homedirectory)) {
+        $fs_jobexecute = {
+            param($effective_homedirectory, $destination)
+            
+        # Ensure the destination directory exists
+            if (-not (Test-Path $destination)) {
+                New-Item -ItemType Directory -Path $destination
+            }
+            
+        # Move command to move the entire directory
+            Move-Item -Path $effective_homedirectory -Destination $destination
+        }
+
+        # Destination path for the offboarded user's data
+            $destinationPath = Join-Path -Path $fs_offboardFolder -ChildPath (Split-Path $effective_homedirectory -Leaf)
+
+        # Execute the transfer job on the fileserver
+            Invoke-Command -ComputerName $fileserver -ScriptBlock $fs_jobexecute -ArgumentList $effective_homedirectory, $destinationPath -AsJob -JobName "FS_TransferJob"
+            $fs_jobStarted = $true
+            
+            # Turn Off the user's HomeDirectory config in AD
+                Set-ADUser -Identity $username -HomeDirectory $null -Server $domainController
+        
+            } else {
+            Write-Host "Both manual_homedirectory and homedirectory are null or blank. Skipping home directory transfer..." -ForegroundColor Magenta
+        }
+
+    # (At the end of the script - there will be a job check to confirm the data transfer has completed before exiting the script)
+        $fs_job = get-job -name FS_TransferJob
 #--------------------------------------------------------------------------------------------------------------
 # Change the AD Description Field to state "Disabled on (current date)"
     Set-ADUser -Identity $username -Description "Disabled on $date" -Server $domainController
@@ -351,12 +389,22 @@ function Add-InputField {
     Set-ADUser -Identity $username -Clear IPPhone -Server $domainController
     Write-Host "$username's IP Phone Entry has been cleared" -ForegroundColor Green
 #--------------------------------------------------------------------------------------------------------------
+#<#
 # Remove all groups EXCEPT for "Domain Users"
     $groups | Where-Object {$_ -ne "Domain Users"} | ForEach-Object {Remove-ADGroupMember -Identity $_ -Members $username -Confirm:$false}
     Write-Host "$username's AD groups have been removed" -ForegroundColor Green
+#>
+
+<#
+# Remove all groups EXCEPT for "Domain Users" and "CustomGroup1" -- you can keep adding groups by piping and adding the addition group -- e.g.(Domain Users|ADGroup1|ADGroup2|ADGroup3)
+    $groups | Where-Object {$_ -notmatch "^(Domain Users|customgroup1)$"} | ForEach-Object {
+        Remove-ADGroupMember -Identity $_ -Members $username -Confirm:$false
+        }
+    Write-Host "$username's AD groups have been removed" -ForegroundColor Green
+#>
 #--------------------------------------------------------------------------------------------------------------
 # Hide from the Global Address List
-    Set-ADUser -Identity $username –Replace @{msExchHideFromAddressLists=$true} –Server $domainController
+    Set-ADUser -Identity $username –Replace @{msExchHideFromAddressLists=$true} -Server $domainController
     Write-Host "$username's account has been hidden from the GAL" -ForegroundColor Green
 #--------------------------------------------------------------------------------------------------------------
 # Move User to Disabled Users (or specified) OU
@@ -388,10 +436,9 @@ function Add-InputField {
     Write-Host "$username's AD Display Name has been updated to:" -ForegroundColor Green
     Write-Host "$newDisplayName" -ForegroundColor Yellow
 #--------------------------------------------------------------------------------------------------------------
-
-###############################################################################################################
-# Run AADConnect Sync (Delta Sync) and wait for 2 minutes
-###############################################################################################################
+#   ♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠
+#   ♠ Run AADConnect Sync (Delta Sync) and wait for 2 minutes ♣
+#   ♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠
 #--------------------------------------------------------------------------------------------------------------
 # Run a Delta Sync to sync the changes to MS365
     Write-Host "AADSync Command has been Executed - Standby..." -ForegroundColor Cyan
@@ -428,13 +475,12 @@ function Add-InputField {
     $Counter_Form.Close()
     Write-Host "AAD Sync to MS365 has been ran" -ForegroundColor Green
 #--------------------------------------------------------------------------------------------------------------
-
-#####################################################################################################################################################################
-#       __    /      __       __   ___ 
-# |\/| /__`  /   /\   / |  | |__) |__  
-# |  | .__/ /   /~~\ /_ \__/ |  \ |___ 
-#####################################################################################################################################################################
-
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █       __    /      __       __   ___  █
+#   █ |\/| /__`  /   /\   / |  | |__) |__   █
+#   █ |  | .__/ /   /~~\ /_ \__/ |  \ |___  █
+#   █                                       █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #--------------------------------------------------------------------------------------------------------------
 # Set sign-in status: Block the sign-in status.
     Set-AzureADUser -ObjectID $upn -AccountEnabled $false
@@ -452,10 +498,9 @@ function Add-InputField {
         Write-Host "Error revoking refresh tokens: $_" -ForegroundColor Magenta
     }
 #--------------------------------------------------------------------------------------------------------------
-
-###############################################################################################################
-# Convert to Shared Mailbox and wait for 2 minutes
-###############################################################################################################
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Convert to Shared Mailbox and wait for 2 minutes ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #--------------------------------------------------------------------------------------------------------------
 Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -ForegroundColor Cyan
 
@@ -490,16 +535,15 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
 	}
 	$Counter_Form.Close()
 #--------------------------------------------------------------------------------------------------------------
-
-#################################################################################################################################################################
-# Remove MS365 Licenses. Performs 3 checks and 4 actions based on the checks:
-# 1: Checks if Mailbox is, or greater than 50GB and In-Place Archive is enabled -- Removes all licenses except for "E3 and E5"
-# 2: Checks if Mailbox is, or greater than 50GB and In-Place Archive is disabled -- Removes all licenses except for "E3 and E5"
-# 3: Checks In-Place Archive is enabled and if Mailbox is less than 50GB -- Removes all licenses except for "E3, E5 and 'Exchange Online Archiving for Exchange'"
-# 4: If the first 3 checks are not met -- Removes all licenses
-#################################################################################################################################################################
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Remove MS365 Licenses. Performs 3 checks and 4 actions based on the checks:                                                                                     ♣
+#   ♣ 1: Checks if Mailbox is, or greater than 50GB and In-Place Archive is enabled -- Removes all licenses except for "E3 and E5"                                    ♣
+#   ♣ 2: Checks if Mailbox is, or greater than 50GB and In-Place Archive is disabled -- Removes all licenses except for "E3 and E5"                                   ♣
+#   ♣ 3: Checks In-Place Archive is enabled and if Mailbox is less than 50GB -- Removes all licenses except for "E3, E5 and 'Exchange Online Archiving for Exchange'" ♣
+#   ♣ 4: If the first 3 checks are not met -- Removes all licenses                                                                                                    ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #--------------------------------------------------------------------------------------------------------------
-# Check if mailbox is, or greater than 50GB and In-Place Archive is enabled: Removes all licenses except for "E3 and E5"
+# 1: Check if mailbox is, or greater than 50GB and In-Place Archive is enabled: Removes all licenses except for "E3 and E5"
     if ($isMailboxOver50GB -and $isInPlaceArchiveEnabled){
         # Strip all O365 licenses except for the E3 and E5 licenses
         $ExcludedLicenses = @("ENTERPRISEPACK", "ENTERPRISEPREMIUM") #Office 365 E3, & E5
@@ -525,7 +569,7 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
             }
     }
 #--------------------------------------------------------------------------------------------------------------
-# Check if mailbox is or greater than 50GB: Remove all licenses except for "E3 and E5"
+# 2: Check if mailbox is or greater than 50GB: Remove all licenses except for "E3 and E5"
     elseif ($isMailboxOver50GB -and -not $isInPlaceArchiveEnabled){
         # Strip all O365 licenses except for the E3 and E5 licenses
         $ExcludedLicenses = @("ENTERPRISEPACK", "ENTERPRISEPREMIUM") #Office 365 E3, & E5
@@ -551,7 +595,7 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
             }
     }
 #--------------------------------------------------------------------------------------------------------------
-# Check if mailbox In-Place Archive is enabled
+# 3: Check if mailbox In-Place Archive is enabled
     elseif ($isInPlaceArchiveEnabled -and -not $isMailboxOver50GB){
         # Strip all O365 licenses except for the E3, E5, and 'Exchange Online Archiving for Exchange' Online License(s)
         $ExcludedLicenses = @("ENTERPRISEPACK", "ENTERPRISEPREMIUM", "EXCHANGEARCHIVE_ADDON") #Office 365 E3, E5, & 'Exchange Online Archiving for Exchange Online'
@@ -577,7 +621,7 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
             }
         }
 #--------------------------------------------------------------------------------------------------------------
-# If Mailbox is less than 50GB and In-Place Archive is not enabled, remove all licenses
+# 4: If Mailbox is less than 50GB and In-Place Archive is not enabled, remove all licenses
     else {
             # Strip all O365 licenses
             $AssignedLicensesTable = Get-AzureADUser -ObjectId $upn | Get-AzureADUserLicenseDetail | Select-Object @{n = "License"; e = { $_.SkuPartNumber } }, skuid
@@ -591,12 +635,11 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
             }
         }
 #--------------------------------------------------------------------------------------------------------------
-
-###############################################################################################################
-# Configure Email Forwarding
-###############################################################################################################
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Verify and configure Forwarder - if flase, will prompt again ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #--------------------------------------------------------------------------------------------------------------
-# Configure Email Forwarding
+# Email Forwarding
     [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic')
     Function Get-ForwardingAddress {
     # Function to validate email address format and existence
@@ -656,6 +699,10 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
         Write-Host "No forwarding address set for $upn." -ForegroundColor Yellow
         }
 #--------------------------------------------------------------------------------------------------------------
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Verify and configure Delegates - if flase, will prompt again ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#--------------------------------------------------------------------------------------------------------------
 # Configure Delegate Permissions
     # Function to validate delegate address in MS365
     Function Validate-Delegate($delegateAddress) {
@@ -700,6 +747,10 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
         }
     }
 #--------------------------------------------------------------------------------------------------------------
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Verify and configure SendAs - if flase, will prompt again ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#--------------------------------------------------------------------------------------------------------------
 # Configure Send-As Permissions
     # Function to validate Send-As address in MS365
     Function Validate-SendAs($sendAsAddress) {
@@ -743,22 +794,19 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
         }
     }
 #--------------------------------------------------------------------------------------------------------------
-
-###############################################################################################################
-# Configure out of office reply
-###############################################################################################################
-if ($outOfOfficeMessage -ne "") {
-    Set-MailboxAutoReplyConfiguration -Identity $upn -AutoReplyState Enabled -ExternalAudience All -ExternalMessage $outOfOfficeMessage -InternalMessage $outOfOfficeMessage 
-    Write-Host "The Out-Of-Office-Rely intputted was successfully applied." -ForegroundColor Green
-} else {
-    Write-Host "No Out of Office message set for $upn." -ForegroundColor Yellow
-}
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Configure out of office reply ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+	if ($outOfOfficeMessage -ne "") {
+		Set-MailboxAutoReplyConfiguration -Identity $upn -AutoReplyState Enabled -ExternalAudience All -ExternalMessage $outOfOfficeMessage -InternalMessage $outOfOfficeMessage 
+		Write-Host "The Out-Of-Office-Rely intputted was successfully applied." -ForegroundColor Green
+	} else {
+		Write-Host "No Out of Office message set for $upn." -ForegroundColor Yellow
+	}
 #--------------------------------------------------------------------------------------------------------------
-
-
-###############################################################################################################
-# Remove user from all MS365 and Security Groups
-###############################################################################################################
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#   ♣ Remove user from all MS365 and Security Groups - this doesn't include dynamic groups. That's a whole can of worms and my script aint that fancy ♣
+#   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #--------------------------------------------------------------------------------------------------------------
 # Get user details
     $UserDetails = Get-AzureADUser -ObjectId $upn
@@ -792,50 +840,81 @@ if ($outOfOfficeMessage -ne "") {
         }
     }
 #--------------------------------------------------------------------------------------------------------------------------------------------------------
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+#   ♠ Checking if $effective_homedirectory file transfer has completed. The script will not complete until this has completed if this was initiated. ♠
+#   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+    # ($fs_job defined earlier in the script)
 
+    # Calls $fs_jobstarted. If true, proceeds with checking the status of the File Transfer Job
+    if ($fs_jobStarted) {
+        Write-Host "Checking status of file transfer job -- Standby..." -ForegroundColor Cyan
+        do {
+            Start-Sleep -Seconds 5  # Wait for 5 seconds before checking again to avoid overloading the system
+            
+            # Refresh job state
+            $fs_jobcheckId = $fs_job.id
+            $fs_jobState = $fs_job.state
+            
+            # Optionally, output the current state for monitoring
+            Write-Host "Current Job State: $fs_jobState" -ForegroundColor Yellow
+            
+        } while ($fs_jobState -eq 'Running')
+
+    # Once out of the loop, check if the job completed successfully or failed
+        if ($fs_jobState -eq 'Completed') {
+            Write-Host "The file transfer job completed successfully." -ForegroundColor Green
+        } else {
+            Write-Host "The file transfer job did not complete successfully. Current state: $fs_jobState" -ForegroundColor Red
+        }
+
+    # Clean up the job
+        Remove-Job -job $fs_job -Force
+    
+    } else {
+        Write-Host "File transfer job was not initiated. Skipping job status check and cleanup." -ForegroundColor Yellow
+    }
+#--------------------------------------------------------------------------------------------------------------------------------------------------------
 Write-Host "The Offboarding Script has been fully ran" -ForegroundColor Green
+} # end of script loop.
+#--------------------------------------------------------------------------------------------------------------------------------------------------------
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+#   █ This part of the script will prompt if another user needs to be offboarded. If yes, the script will execute again. █
+#   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+	function Show-Prompt {
+	# Create a new form
+		$form = New-Object System.Windows.Forms.Form
+		$form.Text = 'User Offboarding'
+		$form.Size = New-Object System.Drawing.Size(300,200)
+		$form.StartPosition = 'CenterScreen'
 
-}
+		# Add a label with your text
+		$label = New-Object System.Windows.Forms.Label
+		$label.Location = New-Object System.Drawing.Point(10,20)
+		$label.Size = New-Object System.Drawing.Size(280,20)
+		$label.Text = 'Do you need to Offboard another user?'
+		$form.Controls.Add($label)
 
-###############################################################################################################
-# This part of the script will prompt if another user needs to be offboarded. If yes, the script to 
-# execute again but skips the step that connects to the MS365/Azure Powershell Modules
-###############################################################################################################
-function Show-Prompt {
-    # Create a new form
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'User Offboarding'
-    $form.Size = New-Object System.Drawing.Size(300,200)
-    $form.StartPosition = 'CenterScreen'
+		# Create a "Yes" button
+		$yesButton = New-Object System.Windows.Forms.Button
+		$yesButton.Location = New-Object System.Drawing.Point(50,100)
+		$yesButton.Size = New-Object System.Drawing.Size(75,23)
+		$yesButton.Text = 'Yes'
+		$yesButton.DialogResult = [System.Windows.Forms.DialogResult]::Yes
+		$form.AcceptButton = $yesButton
+		$form.Controls.Add($yesButton)
 
-    # Add a label with your text
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(10,20)
-    $label.Size = New-Object System.Drawing.Size(280,20)
-    $label.Text = 'Do you need to Offboard another user?'
-    $form.Controls.Add($label)
-
-    # Create a "Yes" button
-    $yesButton = New-Object System.Windows.Forms.Button
-    $yesButton.Location = New-Object System.Drawing.Point(50,100)
-    $yesButton.Size = New-Object System.Drawing.Size(75,23)
-    $yesButton.Text = 'Yes'
-    $yesButton.DialogResult = [System.Windows.Forms.DialogResult]::Yes
-    $form.AcceptButton = $yesButton
-    $form.Controls.Add($yesButton)
-
-    # Create a "No" button
-    $noButton = New-Object System.Windows.Forms.Button
-    $noButton.Location = New-Object System.Drawing.Point(150,100)
-    $noButton.Size = New-Object System.Drawing.Size(75,23)
-    $noButton.Text = 'No'
-    $noButton.DialogResult = [System.Windows.Forms.DialogResult]::No
-    $form.CancelButton = $noButton
-    $form.Controls.Add($noButton)
+		# Create a "No" button
+		$noButton = New-Object System.Windows.Forms.Button
+		$noButton.Location = New-Object System.Drawing.Point(150,100)
+		$noButton.Size = New-Object System.Drawing.Size(75,23)
+		$noButton.Text = 'No'
+		$noButton.DialogResult = [System.Windows.Forms.DialogResult]::No
+		$form.CancelButton = $noButton
+		$form.Controls.Add($noButton)
 
     # Show the form
-    return $form.ShowDialog()
-}
+		return $form.ShowDialog()
+	}
 
 # Initial call to the offboarding function
     OffboardUser
