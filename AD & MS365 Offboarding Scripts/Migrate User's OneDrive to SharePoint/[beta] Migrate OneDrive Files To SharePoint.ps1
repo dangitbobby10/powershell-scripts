@@ -1,6 +1,11 @@
-# Written by dangitbobby10
-# This is still a prototype even though it works. I wanted to dress it up some more but also wanted to publish this as I have friends with a need for it.
-# I know AZCopy is a thing - I'll work on a version that uses AZCopy at a later time.
+﻿# Written by dangitbobby10
+
+# [Quick Comments:]
+    # This is still a prototype/beta release even though it works.
+    # Right now, this script COPIES data. You can change the 'Copy-PnPFile' to 'Move-PnPFile' if you're feeling bold.
+    # I know 'Copy/Move-PnPFolder is a command. Works great within the same site collections. Onedrive is considered a seperate collection and 'move' only works within the same site collection.
+    
+# Requirements: [msgraph app registration (api permissions) & certficiate configured] + [PS7] + [PnP.Powershell Module]
 #---------------------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------------------
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■

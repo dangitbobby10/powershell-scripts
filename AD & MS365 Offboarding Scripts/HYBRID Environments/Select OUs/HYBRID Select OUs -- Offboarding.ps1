@@ -1,4 +1,4 @@
-# Written by dangitbobby10
+﻿# Written by dangitbobby10
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #   █    _  ___   _____ ___ ___ ___    ___      _        _      ___  _   _             ___   __  __ _                      _ _              █
 #   █   | || \ \ / / _ ) _ \_ _|   \  / __| ___| |___ __| |_   / _ \| | | |___  ___   / _ \ / _|/ _| |__  ___  __ _ _ _ __| (_)_ _  __ _    █
@@ -20,10 +20,10 @@
 # Define the server FileServer
     $FileServer = #"fileserver.contoso.com"
 
-# Define the 'Offboarded Users' folder on the Folder server
+# Define the 'Offboarded Users' folder on the Folder server.
     $fs_offboardFolder = #"E:\shares\secureOffboardLocation" or "\\fileserver\secureOffboardLocation"
 
-# Define the User's HomeDirectory -- the script already pulls the user's HomeDirectory value from AD, but if you have your user folders configured a different way, enter in the path here.
+# Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. If you don't have it configured, the script will use this variable instead.
     #$manual_homedirectory = #"E:\shares\user home folders\user's folder"
 
 # Define "Disabled Users" OU
@@ -57,7 +57,7 @@
 #   ♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦
     function OffboardUser {
         # Define the variables to Keep
-            $var_exclude = @('domainController', 'AADSyncServer', 'ou_path', 'LicenseFriendlyNamesScript', 'date', 'csvFilePath')
+            $var_exclude = @('domainController', 'AADSyncServer', 'FileServer', 'fs_offboardFolder', 'manual_homedirectory', 'ou_path', 'LicenseFriendlyNamesScript', 'date', 'csvFilePath')
         
         # Get all variable names except for the ones to exclude
             $varsToRemove = Get-Variable | Where-Object { $var_exclude -notcontains $_.Name } | Select-Object -ExpandProperty Name 
@@ -193,8 +193,7 @@
 #------------------------------------------------------------------------------------------------------------------------------------
 # More Defining Variables
     $mailbox = Get-Mailbox -Identity $upn
-    $mailboxStats = Get-MailboxStatistics -Identity $upn
-    $AADUsername = Get-AzureADUser -Filter "UserPrincipalName eq '$upn'"
+    $mailboxStats = Get-MailboxStatistics -Identity $upn    
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #   ♠ MS365/AAD Variables and Functions ♠
@@ -399,8 +398,8 @@
 #>
 #------------------------------------------------------------------------------------------------------------------------------------
 # Hide from the Global Address List
-Set-ADUser -Identity $username –Replace @{msExchHideFromAddressLists=$true} -Server $domainController
-Write-Host "$username's account has been hidden from the GAL" -ForegroundColor Green
+    Set-ADUser -Identity $username –Replace @{msExchHideFromAddressLists=$true} -Server $domainController
+    Write-Host "$username's account has been hidden from the GAL" -ForegroundColor Green
 #------------------------------------------------------------------------------------------------------------------------------------
 # Update User's AD DisplayName
 
@@ -475,14 +474,14 @@ Write-Host "$username's account has been hidden from the GAL" -ForegroundColor G
     }
     $Counter_Form.Close()
     Write-Host "AAD Sync to MS365 has been ran" -ForegroundColor Green
-#------------------------------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #   █       __    /      __       __   ___  █
 #   █ |\/| /__`  /   /\   / |  | |__) |__   █
 #   █ |  | .__/ /   /~~\ /_ \__/ |  \ |___  █
 #   █                                       █
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-#------------------------------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
 Write-Host "ATTENTION: At this part of the script, it will restore the mailbox as a cloud account and then clear the immutable ID." -ForegroundColor Cyan
 Write-Host "This takes a while, we are at the mercy of Microsoft. Go grab a coffee or eat lunch if you haven't." -ForegroundColor Cyan
 
@@ -668,32 +667,32 @@ else {
     }
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
-#   ♣ Verify and configure Forwarder - if false, will prompt again ♣
+#   ♣ Verify and configure Forwarder - if flase, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
 # Email Forwarding
-[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic')
-Function Get-ForwardingAddress {
-# Function to validate email address format and existence
-Function Validate-EmailAddress($address) {
-    if ($address -match "^[^@]+@[^@]+\.[^@]+$") {
-        try {
-            $resolvedMailbox = Get-Recipient $address
-            if ($resolvedMailbox -ne $null) {
-                return $resolvedMailbox.PrimarySmtpAddress
-            } else {
-                Write-Host "No mailbox found for the provided address. Please try again." -ForegroundColor Yellow
+    [void][Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic')
+    Function Get-ForwardingAddress {
+    # Function to validate email address format and existence
+    Function Validate-EmailAddress($address) {
+        if ($address -match "^[^@]+@[^@]+\.[^@]+$") {
+            try {
+                $resolvedMailbox = Get-Recipient $address
+                if ($resolvedMailbox -ne $null) {
+                    return $resolvedMailbox.PrimarySmtpAddress
+                } else {
+                    Write-Host "No mailbox found for the provided address. Please try again." -ForegroundColor Yellow
+                    return $null
+                }
+            } catch {
+                Write-Host "Failed to resolve email address: $_" -ForegroundColor Red
                 return $null
             }
-        } catch {
-            Write-Host "Failed to resolve email address: $_" -ForegroundColor Red
+        } else {
+            Write-Host "Invalid email format. Please try again." -ForegroundColor Yellow
             return $null
         }
-    } else {
-        Write-Host "Invalid email format. Please try again." -ForegroundColor Yellow
-        return $null
     }
-}
 
 # Check if $forwardingAddress is already set and valid
 if ($forwardingAddress) {
@@ -732,55 +731,55 @@ if ($forwardingAddress -ne $null) {
     }
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
-#   ♣ Verify and configure Delegates - if false, will prompt again ♣
+#   ♣ Verify and configure Delegates - if flase, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
 # Configure Delegate Permissions
-# Function to validate delegate address in MS365
-Function Validate-Delegate($delegateAddress) {
-    if ($delegateAddress -match "^[^@]+@[^@]+\.[^@]+$") {
-        try {
-            # Replace 'Get-Mailbox' with the appropriate cmdlet or command for your MS365 environment
-            $mailbox = Get-Mailbox -Identity $delegateAddress -ErrorAction Stop
-            return $delegateAddress
-        } catch {
-            Write-Host "Delegate address ($delegateAddress) not found in MS365. Please try again." -ForegroundColor Yellow
+    # Function to validate delegate address in MS365
+    Function Validate-Delegate($delegateAddress) {
+        if ($delegateAddress -match "^[^@]+@[^@]+\.[^@]+$") {
+            try {
+                # Replace 'Get-Mailbox' with the appropriate cmdlet or command for your MS365 environment
+                $mailbox = Get-Mailbox -Identity $delegateAddress -ErrorAction Stop
+                return $delegateAddress
+            } catch {
+                Write-Host "Delegate address ($delegateAddress) not found in MS365. Please try again." -ForegroundColor Yellow
+                return $null
+            }
+        } else {
+            Write-Host "Invalid email format for address ($delegateAddress). Please try again." -ForegroundColor Yellow
             return $null
         }
-    } else {
-        Write-Host "Invalid email format for address ($delegateAddress). Please try again." -ForegroundColor Yellow
-        return $null
     }
-}
 
 # Configure Delegate Permissions
-$delegateAddresses = @($delegate1, $delegate2, $delegate3)
+    $delegateAddresses = @($delegate1, $delegate2, $delegate3)
 
-foreach ($delegate in $delegateAddresses) {
-    if ($delegate -ne "") {
-        $validatedDelegate = $null
-        while ($null -eq $validatedDelegate) {
-            $validatedDelegate = Validate-Delegate $delegate
-            if ($null -eq $validatedDelegate) {
-                # Prompt for re-entry
-                $delegatePrompt = "Enter a valid delegate email address in MS365 for address ($delegate):"
-                $delegate = [Microsoft.VisualBasic.Interaction]::InputBox($delegatePrompt, "Delegate Email Entry")
-                if ([string]::IsNullOrWhiteSpace($delegate)) {
-                    Write-Host "Entry for address ($delegate) canceled. Moving to the next delegate." -ForegroundColor Yellow
-                    break
+    foreach ($delegate in $delegateAddresses) {
+        if ($delegate -ne "") {
+            $validatedDelegate = $null
+            while ($null -eq $validatedDelegate) {
+                $validatedDelegate = Validate-Delegate $delegate
+                if ($null -eq $validatedDelegate) {
+                    # Prompt for re-entry
+                    $delegatePrompt = "Enter a valid delegate email address in MS365 for address ($delegate):"
+                    $delegate = [Microsoft.VisualBasic.Interaction]::InputBox($delegatePrompt, "Delegate Email Entry")
+                    if ([string]::IsNullOrWhiteSpace($delegate)) {
+                        Write-Host "Entry for address ($delegate) canceled. Moving to the next delegate." -ForegroundColor Yellow
+                        break
+                    }
                 }
             }
-        }
 
 # Once validated, add permissions
         if ($validatedDelegate -ne $null) {
             Add-MailboxPermission -Identity $upn -User $validatedDelegate -AccessRights FullAccess -InheritanceType All
+            }
         }
     }
-}
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
-#   ♣ Verify and configure SendAs - if false, will prompt again ♣
+#   ♣ Verify and configure SendAs - if flase, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
 # Configure Send-As Permissions
@@ -829,36 +828,37 @@ foreach ($sendAs in $sendAsAddresses) {
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Configure out of office reply ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
-if ($outOfOfficeMessage -ne "") {
-    Set-MailboxAutoReplyConfiguration -Identity $upn -AutoReplyState Enabled -ExternalAudience All -ExternalMessage $outOfOfficeMessage -InternalMessage $outOfOfficeMessage 
-    Write-Host "The Out-Of-Office-Rely intputted was successfully applied." -ForegroundColor Green
-} else {
-    Write-Host "No Out of Office message set for $upn." -ForegroundColor Yellow
-}
+#------------------------------------------------------------------------------------------------------------------------------------
+    if ($outOfOfficeMessage -ne "") {
+        Set-MailboxAutoReplyConfiguration -Identity $upn -AutoReplyState Enabled -ExternalAudience All -ExternalMessage $outOfOfficeMessage -InternalMessage $outOfOfficeMessage 
+        Write-Host "The Out-Of-Office-Rely intputted was successfully applied." -ForegroundColor Green
+    } else {
+        Write-Host "No Out of Office message set for $upn." -ForegroundColor Yellow
+    }
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Remove user from all MS365 and Security Groups - this doesn't include dynamic groups. That's a whole can of worms and my script aint that fancy ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
 # Get user details
-$UserDetails = Get-AzureADUser -ObjectId $upn
-$UserId = $UserDetails.ObjectId
+    $UserDetails = Get-AzureADUser -ObjectId $upn
+    $UserId = $UserDetails.ObjectId
 
 # Removing All Groups (MS365, Security, & Distribution)
-$Memberships = Get-AzureADUserMembership -ObjectId $UserId | Where-object { $_.ObjectType -eq "Group"}
+    $Memberships = Get-AzureADUserMembership -ObjectId $UserId | Where-object { $_.ObjectType -eq "Group"}
 
 # Remove user from all MS365 and Security Groups
-foreach ($group in $Memberships) {
-    try {
-        Remove-AzureADGroupMember -ObjectId $group.ObjectId -MemberId $UserId
-        Write-Host "Successfully removed user $($UserDetails.DisplayName) from group $($group.DisplayName)" -ForegroundColor Green
+    foreach ($group in $Memberships) {
+        try {
+            Remove-AzureADGroupMember -ObjectId $group.ObjectId -MemberId $UserId
+            Write-Host "Successfully removed user $($UserDetails.DisplayName) from group $($group.DisplayName)" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Error removing user $($UserDetails.DisplayName) from group $($group.DisplayName)" -ForegroundColor Magenta
+            Write-Host "Note: Some groups that are unable to be removed may be ADSynced or a Distribution Group, which the next command will catch." -ForegroundColor Cyan
+            Write-Host "Also Note: There are a handful of groups that are applied at the Organization level that cannot be removed." -ForegroundColor Cyan
+        }
     }
-    catch {
-        Write-Host "Error removing user $($UserDetails.DisplayName) from group $($group.DisplayName)" -ForegroundColor Magenta
-        Write-Host "Note: Some groups that are unable to be removed may be ADSynced or a Distribution Group, which the next command will catch." -ForegroundColor Cyan
-        Write-Host "Also Note: There are a handful of groups that are applied at the Organization level that cannot be removed." -ForegroundColor Cyan
-    }
-}
 
 # Remove user from all Distrubtion Groups
     $DistinguishedName = $Mailbox.DistinguishedName 
@@ -875,36 +875,36 @@ foreach ($group in $Memberships) {
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #   ♠ Checking if $effective_homedirectory file transfer has completed. The script will not complete until this has completed if this was initiated. ♠
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
-# ($fs_job defined earlier in the script)
+    # ($fs_job defined earlier in the script)
 
-# Calls $fs_jobstarted. If true, proceeds with checking the status of the File Transfer Job
-if ($fs_jobStarted) {
-    Write-Host "Checking status of file transfer job -- Standby..." -ForegroundColor Cyan
-    do {
-        Start-Sleep -Seconds 5  # Wait for 5 seconds before checking again to avoid overloading the system
+    # Calls $fs_jobstarted. If true, proceeds with checking the status of the File Transfer Job
+    if ($fs_jobStarted) {
+        Write-Host "Checking status of file transfer job -- Standby..." -ForegroundColor Cyan
+        do {
+            Start-Sleep -Seconds 5  # Wait for 5 seconds before checking again to avoid overloading the system
         
-        # Refresh job state
-            $fs_jobcheckId = $fs_job.id
-            $fs_jobState = $fs_job.state
+            # Refresh job state
+                $fs_jobcheckId = $fs_job.id
+                $fs_jobState = $fs_job.state
         
-        # Optionally, output the current state for monitoring
-            Write-Host "Current Job State: $fs_jobState" -ForegroundColor Yellow
+            # Optionally, output the current state for monitoring
+                Write-Host "Current Job State: $fs_jobState" -ForegroundColor Yellow
 
-        } while ($fs_jobState -eq 'Running')
+            } while ($fs_jobState -eq 'Running')
 
-# Once out of the loop, check if the job completed successfully or failed
-    if ($fs_jobState -eq 'Completed') {
-        Write-Host "The file transfer job completed successfully." -ForegroundColor Green
-    } else {
-        Write-Host "The file transfer job did not complete successfully. Current state: $fs_jobState" -ForegroundColor Red
-    }
+    # Once out of the loop, check if the job completed successfully or failed
+        if ($fs_jobState -eq 'Completed') {
+            Write-Host "The file transfer job completed successfully." -ForegroundColor Green
+        } else {
+            Write-Host "The file transfer job did not complete successfully. Current state: $fs_jobState" -ForegroundColor Red
+        }
 
-# Clean up the job
-    Remove-Job -job $fs_job -Force
+    # Clean up the job
+        Remove-Job -job $fs_job -Force
 
-    } else {
-        Write-Host "File transfer job was not initiated. Skipping job status check and cleanup." -ForegroundColor Yellow
-    }
+        } else {
+            Write-Host "File transfer job was not initiated. Skipping job status check and cleanup." -ForegroundColor Yellow
+        }
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Write-Host "The Offboarding Script has been fully ran" -ForegroundColor Green
 } # end of script loop.

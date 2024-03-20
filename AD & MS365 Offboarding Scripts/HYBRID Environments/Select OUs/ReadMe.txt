@@ -11,12 +11,3 @@ Requirements:
 	Install-Module -Name MSOnline
 	Install-Module -Name ExchangeOnlineManagement
 	Install-Module -Name AzureAD
-
-
-
-See line 36-57. Define the following variables:
-• Define the domain controller to connect to (i advise targetting the DC that AADSync is targetting)
-• Define the server with AADSync
-• Define 'Disabled Users OU'
-• Define 'LicenseFriendlyNamesScript' path for the MS365 Licenses. Reads as the actual license rather than the SKU.
-• Define the path to the CSV file

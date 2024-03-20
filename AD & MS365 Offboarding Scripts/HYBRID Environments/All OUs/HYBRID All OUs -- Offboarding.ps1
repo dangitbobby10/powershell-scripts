@@ -28,7 +28,7 @@
 # Define the 'Offboarded Users' folder on the Folder server
     $fs_offboardFolder = #"E:\shares\secureOffboardLocation"
 
-# Define the User's HomeDirectory
+# Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. If you don't have it configured, the script will use this variable instead.
     #$manual_homedirectory = #"E:\shares\user home folders\user's folder"
 
 # Define "Disabled Users" OU
@@ -62,7 +62,7 @@
 #   ♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦
     function OffboardUser {
         # Define the variables to Keep
-            $var_exclude = @('domainController', 'AADSyncServer', 'ou_path', 'LicenseFriendlyNamesScript', 'date', 'csvFilePath')
+            $var_exclude = @('domainController', 'AADSyncServer', 'FileServer', 'fs_offboardFolder', 'manual_homedirectory', 'ou_path', 'LicenseFriendlyNamesScript', 'date', 'csvFilePath')
         
         # Get all variable names except for the ones to exclude
             $varsToRemove = Get-Variable | Where-Object { $var_exclude -notcontains $_.Name } | Select-Object -ExpandProperty Name 
@@ -198,8 +198,7 @@ function Add-InputField {
 #--------------------------------------------------------------------------------------------------------------
 # More Defining Variables
     $mailbox = Get-Mailbox -Identity $upn
-    $mailboxStats = Get-MailboxStatistics -Identity $upn
-    $AADUsername = Get-AzureADUser -Filter "UserPrincipalName eq '$upn'"
+    $mailboxStats = Get-MailboxStatistics -Identity $upn    
 #--------------------------------------------------------------------------------------------------------------
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #   ♠ MS365/AAD Variables and Functions ♠
@@ -207,7 +206,6 @@ function Add-InputField {
 #--------------------------------------------------------------------------------------------------------------
 # Create hashtable to store upcoming properties
     $properties = @{}
-#--------------------------------------------------------------------------------------------------------------
 # Import 'LicenseFriendlyNamesScript' for the MS365 Licenses. Reads as the actual license rather than the SKU.
     . $LicenseFriendlyNamesScript
 
@@ -797,6 +795,7 @@ Write-Host "Mailbox is being converted to a Shared Mailbox - Standby..." -Foregr
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Configure out of office reply ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
+#--------------------------------------------------------------------------------------------------------------
 	if ($outOfOfficeMessage -ne "") {
 		Set-MailboxAutoReplyConfiguration -Identity $upn -AutoReplyState Enabled -ExternalAudience All -ExternalMessage $outOfOfficeMessage -InternalMessage $outOfOfficeMessage 
 		Write-Host "The Out-Of-Office-Rely intputted was successfully applied." -ForegroundColor Green
