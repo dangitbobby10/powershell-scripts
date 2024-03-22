@@ -290,7 +290,7 @@
         Write-Host "$email's password has been set to:" -ForegroundColor Green
         Write-Host "$password" -ForegroundColor Yellow
     } catch {
-        Write-Host "Error setting password for $email: $_ -- Manual intervention required." -ForegroundColor Magenta
+        Write-Host "Error setting password for {$email}: $_ -- Manual intervention required." -ForegroundColor Magenta
     }
 #------------------------------------------------------------------------------------------------------------------------------------
 # Remove exited user from all found Admin Roles
