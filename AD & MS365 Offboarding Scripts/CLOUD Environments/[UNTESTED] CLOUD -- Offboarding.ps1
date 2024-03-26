@@ -80,14 +80,14 @@
     }  
 
 # Add fields using the function, with updates for explicit Y positions
-    $emailBox = Add-InputField $form "Full Email Address (e.g. john.doe@contoso.com):" $initialTopPosition
+    $emailBox = Add-InputField $form "Offboarded User's Full Email (e.g. john.doe@contoso.com):" $initialTopPosition
     $forwardingAddressBox = Add-InputField $form 'Forwarding Address:' ($emailBox.Location.Y + 30)
-    $delegateBox1 = Add-InputField $form 'Delegate 1:' ($forwardingAddressBox.Location.Y + 30)
-    $delegateBox2 = Add-InputField $form 'Delegate 2:' ($delegateBox1.Location.Y + 30)
-    $delegateBox3 = Add-InputField $form 'Delegate 3:' ($delegateBox2.Location.Y + 30)
-    $sendasBox1 = Add-InputField $form 'Send As 1:' ($delegateBox3.Location.Y + 30)
-    $sendasBox2 = Add-InputField $form 'Send As 2:' ($sendasBox1.Location.Y + 30)
-    $sendasBox3 = Add-InputField $form 'Send As 3:' ($sendasBox2.Location.Y + 30)
+    $delegateBox1 = Add-InputField $form 'Delegate 1 (full email adderss):' ($forwardingAddressBox.Location.Y + 30)
+    $delegateBox2 = Add-InputField $form 'Delegate 2 (full email adderss):' ($delegateBox1.Location.Y + 30)
+    $delegateBox3 = Add-InputField $form 'Delegate 3 (full email adderss):' ($delegateBox2.Location.Y + 30)
+    $sendasBox1 = Add-InputField $form 'Send As 1 (full email adderss):' ($delegateBox3.Location.Y + 30)
+    $sendasBox2 = Add-InputField $form 'Send As 2 (full email adderss):' ($sendasBox1.Location.Y + 30)
+    $sendasBox3 = Add-InputField $form 'Send As 3 (full email adderss):' ($sendasBox2.Location.Y + 30)
     $outOfOfficeMessageBox = Add-InputField $form 'Out of Office Message:' ($sendasBox3.Location.Y + 30)
 
     $submitButton = New-Object System.Windows.Forms.Button
@@ -126,20 +126,31 @@
 }
 #------------------------------------------------------------------------------------------------------------------------------------
 # Verify the exited user's email address
-    # Function to validate exited user's email address in MS365
-    Function Test-Email($email) {
-        if ($email -match "^[^@]+@[^@]+\.[^@]+$") {
-            try {
-                # Replace 'Get-Mailbox' with the appropriate cmdlet or command for your MS365 environment
-                $checkmailbox = Get-Mailbox -Identity $email -ErrorAction Stop
-                return $email
-            } catch {
-                Write-Host "Exited User's email address ($email) was not found in MS365. Please try again." -ForegroundColor Yellow
-                return $null
+    if ($email -ne "") {
+        $validatedemail = $null
+        while ($null -eq $validatedemail) {
+            $validatedemail = Get-Mailbox -Identity $email | select-object -expandproperty PrimarySmtpAddress -ErrorAction silentlycontinue
+            if ($null -eq $validatedemail) {
+
+            [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
+            $msg = "$email not found in MS365`n`n" +
+                "Enter the valid email address in MS365 of the exited user."
+        
+            $title = 'Retry - Define Exited User'
+            $default = $null  # optional default value
+            $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
+
+                if ([string]::IsNullOrWhiteSpace($response)) {
+                    Write-Host "Entry for address ($email) canceled." -ForegroundColor Yellow
+                    $validatedemail = "canceled" # Use a non-null value to exit loop
+                } else {
+                    $email = $response
+                }
             }
-        } else {
-            Write-Host "Invalid email format for address ($email). Please try again." -ForegroundColor Yellow
-            return $null
+        }
+
+        if ($validatedemail -ne $null -and $validatedemail -ne "canceled") {
+            Write-Host "($email) has been validated in MS365. The script will now begin gathering the user's details and export them to a CSV file." -ForegroundColor Green
         }
     }
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -485,64 +496,39 @@ else {
 #   ♣ Verify and configure Forwarder - if false, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
-# Email Forwarding
-[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic')
-Function Get-ForwardingAddress {
-# Function to validate email address format and existence
-Function Validate-EmailAddress($address) {
-    if ($address -match "^[^@]+@[^@]+\.[^@]+$") {
-        try {
-            $resolvedMailbox = Get-Recipient $address
-            if ($resolvedMailbox -ne $null) {
-                return $resolvedMailbox.PrimarySmtpAddress
-            } else {
-                Write-Host "No mailbox found for the provided address. Please try again." -ForegroundColor Yellow
-                return $null
+# Configure Forwarding
+    $forwardingAddresses = @($forwardingAddress)
+    foreach ($forwarder in $forwardingAddresses) {
+        if ($forwarder -ne "") {
+            $validatedForwarder = $null
+            while ($null -eq $validatedForwarder) {
+                $validatedForwarder = Validate-Forwarder $forwarder
+                if ($null -eq $validatedForwarder) {
+
+                [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
+                $msg = "$forwarder not found in MS365`n`n" +
+                    "Enter a valid forwarding address in MS365."
+            
+                $title = 'Retry - Configure Forwarder'
+                $default = $null  # optional default value
+                $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
+
+                    if ([string]::IsNullOrWhiteSpace($response)) {
+                        Write-Host "Entry for address ($forwarder) canceled." -ForegroundColor Yellow
+                        $validatedForwarder = "canceled" # Use a non-null value to exit loop
+                    } else {
+                        $forwarder = $response
+                    }
+                }
             }
-        } catch {
-            Write-Host "Failed to resolve email address: $_" -ForegroundColor Magenta
-            return $null
+
+            if ($validatedForwarder -ne $null -and $validatedForwarder -ne "canceled") {
+                Set-Mailbox -Identity $upn -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
+                Write-Host "$upn's emails will also forward to $validatedForwarder" -ForegroundColor Green
+            } else {
+            Write-Host "No forwarding address set for $upn." -ForegroundColor Yellow
+            }	
         }
-    } else {
-        Write-Host "Invalid email format. Please try again." -ForegroundColor Yellow
-        return $null
-    }
-}
-
-# Check if $forwardingAddress is already set and valid
-if ($forwardingAddress) {
-    $validatedAddress = Validate-EmailAddress $forwardingAddress
-    if ($validatedAddress) {
-        return $validatedAddress
-    }
-}
-
-# Prompt for new forwarding address
-do {
-    $PromptText = "Forwarding address ($forwardingAddress) not found in MS365. Please try again.`n`nExample: user@domain.com`n`nClick Cancel if no forwarding needs to be applied."
-    $Title = "Forwarding Email Entry"
-    $forwardingAddressInput = [Microsoft.VisualBasic.Interaction]::InputBox($PromptText, $Title)
-
-    if ([string]::IsNullOrEmpty($forwardingAddressInput)) {
-        Write-Host "No forwarding address provided. Moving to the next step." -ForegroundColor Yellow
-        return $null
-        }
-
-        $validatedAddress = Validate-EmailAddress $forwardingAddressInput
-    } while (-not $validatedAddress)
-
-    return $validatedAddress
-}
-
-$forwardingAddress = Get-ForwardingAddress
-
-# Check if a forwarding address was provided
-if ($forwardingAddress -ne $null) {
-    # Update forwarding address
-    Set-Mailbox -Identity $email -ForwardingSmtpAddress $forwardingAddress -DeliverToMailboxAndForward $true
-    Write-Host "$email's emails will also forward to $forwardingAddress" -ForegroundColor Green
-} else {
-    Write-Host "No forwarding address set for $email." -ForegroundColor Yellow
     }
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
@@ -550,97 +536,72 @@ if ($forwardingAddress -ne $null) {
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
 # Configure Delegate Permissions
-# Function to validate delegate address in MS365
-Function Validate-Delegate($delegateAddress) {
-    if ($delegateAddress -match "^[^@]+@[^@]+\.[^@]+$") {
-        try {
-            # Replace 'Get-Mailbox' with the appropriate cmdlet or command for your MS365 environment
-            $mailbox = Get-Mailbox -Identity $delegateAddress -ErrorAction Stop
-            return $delegateAddress
-        } catch {
-            Write-Host "Delegate address ($delegateAddress) not found in MS365. Please try again." -ForegroundColor Yellow
-            return $null
-        }
-    } else {
-        Write-Host "Invalid email format for address ($delegateAddress). Please try again." -ForegroundColor Yellow
-        return $null
-    }
-}
+    $delegateAddresses = @($delegate1, $delegate2, $delegate3)
+    foreach ($delegate in $delegateAddresses) {
+        if ($delegate -ne "") {
+            $validatedDelegate = $null
+            while ($null -eq $validatedDelegate) {
+                $validatedDelegate = Validate-Delegate $delegate
+                if ($null -eq $validatedDelegate) {
 
-# Configure Delegate Permissions
-$delegateAddresses = @($delegate1, $delegate2, $delegate3)
+                [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
+                $msg = "$delegate not found in MS365`n`n" +
+                    "Enter a valid Delegate email address in MS365."
+            
+                $title = 'Retry - Configure Delegate(s)'
+                $default = $null  # optional default value
+                $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
 
-foreach ($delegate in $delegateAddresses) {
-    if ($delegate -ne "") {
-        $validatedDelegate = $null
-        while ($null -eq $validatedDelegate) {
-            $validatedDelegate = Validate-Delegate $delegate
-            if ($null -eq $validatedDelegate) {
-                # Prompt for re-entry
-                $delegatePrompt = "Enter a valid delegate email address in MS365 for address ($delegate):"
-                $delegate = [Microsoft.VisualBasic.Interaction]::InputBox($delegatePrompt, "Delegate Email Entry")
-                if ([string]::IsNullOrWhiteSpace($delegate)) {
-                    Write-Host "Entry for address ($delegate) canceled. Moving to the next delegate." -ForegroundColor Yellow
-                    break
+                    if ([string]::IsNullOrWhiteSpace($response)) {
+                        Write-Host "Entry for address ($delegate) canceled. Moving to the next delegate." -ForegroundColor Yellow
+                        $validatedDelegate = "canceled" # Use a non-null value to exit loop
+                    } else {
+                        $delegate = $response
+                    }
                 }
             }
-        }
 
-# Once validated, add permissions
-        if ($validatedDelegate -ne $null) {
-            Add-MailboxPermission -Identity $email
-     -User $validatedDelegate -AccessRights FullAccess -InheritanceType All
+            if ($validatedDelegate -ne $null -and $validatedDelegate -ne "canceled") {
+                Add-MailboxPermission -Identity $upn -User $validatedDelegate -AccessRights FullAccess -InheritanceType All
+            }
         }
     }
-}
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Verify and configure SendAs - if false, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
 # Configure Send-As Permissions
-# Function to validate Send-As address in MS365
-Function Validate-SendAs($sendAsAddress) {
-    if ($sendAsAddress -match "^[^@]+@[^@]+\.[^@]+$") {
-        try {
-            # Replace 'Get-Mailbox' with the appropriate cmdlet or command for your MS365 environment
-            $mailbox = Get-Mailbox -Identity $sendAsAddress -ErrorAction Stop
-            return $sendAsAddress
-        } catch {
-            Write-Host "Send-As address ($sendAsAddress) not found in MS365. Please try again." -ForegroundColor Yellow
-            return $null
-        }
-    } else {
-        Write-Host "Invalid email format for address ($sendAsAddress). Please try again." -ForegroundColor Yellow
-        return $null
-    }
-}
+    $sendAsAddresses = @($sendAs1, $sendAs2, $sendAs3)
+    foreach ($sendAs in $sendAsAddresses) {
+        if ($sendAs -ne "") {
+            $validatedSendAs = $null
+            while ($null -eq $validatedSendAs) {
+                $validatedSendAs = Get-Mailbox -Identity $sendAs | select-object -expandproperty PrimarySmtpAddress -ErrorAction silentlycontinue
+                if ($null -eq $validatedSendAs) {
 
-# Configure Send-As Permissions
-$sendAsAddresses = @($sendAs1, $sendAs2, $sendAs3)
+                [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
+                $msg = "$sendAs not found in MS365`n`n" +
+                    "Enter a valid SendAs email address in MS365."
+            
+                $title = 'Retry - Configure SendAs(s)'
+                $default = $null  # optional default value
+                $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
 
-foreach ($sendAs in $sendAsAddresses) {
-    if ($sendAs -ne "") {
-        $validatedSendAs = $null
-        while ($null -eq $validatedSendAs) {
-            $validatedSendAs = Validate-SendAs $sendAs
-            if ($null -eq $validatedSendAs) {
-                # Prompt for re-entry
-                $sendAsPrompt = "Enter a valid Send-As email address in MS365 for address ($sendAs):"
-                $sendAs = [Microsoft.VisualBasic.Interaction]::InputBox($sendAsPrompt, "Send-As Email Entry")
-                if ([string]::IsNullOrWhiteSpace($sendAs)) {
-                    Write-Host "Entry for address ($sendAs) canceled. Moving to the next Send-As address." -ForegroundColor Yellow
-                    break
+                    if ([string]::IsNullOrWhiteSpace($response)) {
+                        Write-Host "Entry for address ($sendas) canceled. Moving to the next SendAs address." -ForegroundColor Yellow
+                        $validatedSendAs = "canceled" # Use a non-null value to exit loop
+                    } else {
+                        $SendAs = $response
+                    }
                 }
             }
-        }
-        # Once validated, add Send-As permissions
-        if ($validatedSendAs -ne $null) {
-            Add-RecipientPermission -Identity $email
-     -Trustee $validatedSendAs -AccessRights SendAs -Confirm:$false
+
+            if ($validatedSendAs -ne $null -and $validatedSendAs -ne "canceled") {
+                Add-RecipientPermission -Identity $upn -Trustee $validatedSendAs -AccessRights SendAs -Confirm:$false
+            }
         }
     }
-}
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Configure out of office reply ♣
