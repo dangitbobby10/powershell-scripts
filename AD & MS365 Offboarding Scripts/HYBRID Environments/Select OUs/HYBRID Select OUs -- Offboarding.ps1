@@ -12,25 +12,25 @@
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 # Define the domain controller
-    $domainController = #"primaryDC.contoso.com"
+$domainController = ""  #"primaryDC.contoso.com"
 
 # Define the (primary not staging) AADConnect Server
-    $AADSyncServer = #"aadsync.contoso.com"
+    $AADSyncServer = ""     #"aadsync.contoso.com"
 
 # Define the server FileServer
-    $FileServer = #"fileserver.contoso.com"
+    $FileServer = ""        #"fileserver.contoso.com"
 
-# Define the 'Offboarded Users' folder on the Folder server.
-    $fs_offboardFolder = #"E:\shares\secureOffboardLocation" or "\\fileserver\secureOffboardLocation"
+# Define the 'Offboarded Users' folder on the Folder server
+    $fs_offboardFolder = "" #"E:\shares\secureOffboardLocation"
 
 # Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. If you don't have it configured, the script will use this variable instead.
-    #$manual_homedirectory = #"E:\shares\user home folders\user's folder"
+    $manual_homedirectory = "" #"E:\shares\user home folders\user's folder"
 
 # Define "Disabled Users" OU
-    $ou_path = #"OU=Disabled Users,DC=contoso,DC=com"
+    $ou_path = ""           #"OU=Disabled Users,DC=contoso,DC=com"
 
 # Define the path to the "License Friendly Names Script" that transforms MS365 licenses from SKU to Friendly Names (e.g. "ENTERPRISEPACK" = "Office 365 E3")
-    $LicenseFriendlyNamesScript = #"C:\"path to..."\LicenseFriendlyNamesScript.ps1"
+    $LicenseFriendlyNamesScript = ""   #"C:\"path to..."\LicenseFriendlyNamesScript.ps1"
 
 # Define the 'Date' Variable for the CSV export file
     $date = Get-Date -Format "MM-dd-yyyy"
@@ -38,6 +38,7 @@
 # Define the path to the CSV file
     # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block IF you have $username in the filepath.)
     $csvFilePath = { "c:\users\$env:username\desktop\Offboarding - $username $date.csv" }
+#--------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #   ♠ Connect to Required MS365 Modules and Import the AD PS Module ♠
@@ -192,6 +193,7 @@
     $ou = Get-OUFromDN($user.DistinguishedName)
 #------------------------------------------------------------------------------------------------------------------------------------
 # More Defining Variables
+    $azure = Get-AzureADUser -ObjectId $upn    
     $mailbox = Get-Mailbox -Identity $upn
     $mailboxStats = Get-MailboxStatistics -Identity $upn    
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -201,12 +203,16 @@
 #------------------------------------------------------------------------------------------------------------------------------------
 # Create hashtable to store upcoming properties
     $properties = @{}
-#------------------------------------------------------------------------------------------------------------------------------------
 # Import 'LicenseFriendlyNamesScript' for the MS365 Licenses. Reads as the actual license rather than the SKU.
     . $LicenseFriendlyNamesScript
 
 # Join friendly license names and add to $Properties hashtable
     $properties['Licenses'] = $friendlyLicenseNames -join ", "
+#------------------------------------------------------------------------------------------------------------------------------------
+# Detect & Retrieve found Admin Roles
+    $azureRoles = Get-AzureADDirectoryRole | Where-Object { (Get-AzureADDirectoryRoleMember -ObjectId $_.ObjectId).ObjectId -contains $azure.ObjectId }
+    $rolesCommaSeparated = $azureRoles.DisplayName -join ", "
+    $properties['Admin Roles'] = $rolesCommaSeparated
 #------------------------------------------------------------------------------------------------------------------------------------
 # Check if mailbox is at or over 50GB
     $mailboxSizeValue = $mailboxStats.TotalItemSize.ToString()
@@ -247,7 +253,7 @@
     $properties['Licenses'] = $friendlyLicenseNames -join ", "
 #------------------------------------------------------------------------------------------------------------------------------------
 # Check if forwarding is enabled
-    $isForwardingEnabled = $mailbox.ForwardingSmtpAddress -ne $null
+    $isForwardingEnabled = $null -ne $mailbox.ForwardingSmtpAddress
     $currentforwardingAddress = $mailbox.ForwardingSmtpAddress
 
 # If there is forwarding, record the forwarding account
@@ -290,6 +296,9 @@
     $finalResult | Add-Member -MemberType NoteProperty -Name "Home Drive Path" -Value $homedirectory
     $finalResult | Add-Member -MemberType NoteProperty -Name "AD Groups" -Value $groupList
     $finalResult | Add-Member -MemberType NoteProperty -Name "MS365 Groups" -Value $properties['MS365 Groups']
+    $finalResult | Add-Member -MemberType NoteProperty -Name "MS365 Admin Roles" -Value $properties['Admin Roles']
+    $finalResult | Add-Member -MemberType NoteProperty -Name "OnlineArchive Status" -Value $mailbox.ArchiveStatus
+    $finalResult | Add-Member -MemberType NoteProperty -Name "LitHold Status" -Value $mailboxStats.LitigationHoldEnabled
     $finalResult | Add-Member -MemberType NoteProperty -Name "Forwarding To" -Value $properties['Forwarding To']
     $finalResult | Add-Member -MemberType NoteProperty -Name "Delegates" -Value $properties['Delegates']
     $finalResult | Add-Member -MemberType NoteProperty -Name "SendAs" -Value $properties['SendAs']
@@ -319,7 +328,7 @@
 #------------------------------------------------------------------------------------------------------------------------------------
 # Reset the AD account's password to something random (21 complex unique characters)
     $specialCharacters = "~!@#$%^&*"
-    $password = -join ((48..57) + (65..90) + (97..122) + [int[]][char[]]$specialCharacters | Get-Random -Count 21 | % {[char]$_})
+    $password = -join ((48..57) + (65..90) + (97..122) + [int[]][char[]]$specialCharacters | Get-Random -Count 21 | ForEach-Object {[char]$_})
     Set-ADAccountPassword -Identity $username -NewPassword (ConvertTo-SecureString -AsPlainText $password -Force) -Server $domainController
     Write-Host "$username's password has been set to:" -ForegroundColor Green
     Write-Host "$password" -ForegroundColor Yellow
@@ -327,44 +336,47 @@
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #   ♠ Transfer User's Home Directory to the "Offboarded Users" folder on the File Server ♠
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
-# Initialize job started flag -- this is so if you don't want to transfer any files, the script will know and won't perform the final checks to determine if the tranfer job completed.
+# Initialize a flag to track if the job started. This helps to know whether to check for job completion later.
     $fs_jobStarted = $false
 
-# Determine which home directory to use. If $manual_homedirectory is null - the script will use the $homedirectory path.
+# Determine the effective home directory based on whether $manual_homedirectory is provided.
     $effective_homedirectory = if (-not [string]::IsNullOrWhiteSpace($manual_homedirectory)) {
         $manual_homedirectory
     } else {
         $homedirectory
     }
 
-# Check if both $manual_homedirectory and $homedirectory are null or blank. Will not perform data transfer if both variables are blank.
+# Only proceed if an effective home directory is identified; otherwise, skip the transfer.
     if (-not [string]::IsNullOrWhiteSpace($effective_homedirectory)) {
+        # Define the script block to be executed, including parameters for dynamic values.
         $fs_jobexecute = {
-            param($effective_homedirectory, $destination)
+            param(
+                [string]$effective_homedirectory, 
+                [string]$fs_offboardFolder
+            )
             
-        # Ensure the destination directory exists
-            if (-not (Test-Path $destination)) {
-                New-Item -ItemType Directory -Path $destination
+            # Ensure the destination directory exists before moving.
+            if (-not (Test-Path -Path $fs_offboardFolder)) {
+                New-Item -ItemType Directory -Path $fs_offboardFolder -Force
             }
             
-    # Move command to move the entire directory
-        Move-Item -Path $effective_homedirectory -Destination $destination
-    }
+            # Move the directory to the destination.
+            Move-Item -Path $effective_homedirectory -Destination $destinationPath
+        }
 
-    # Destination path for the offboarded user's data
-        $destinationPath = Join-Path -Path $fs_offboardFolder -ChildPath (Split-Path $effective_homedirectory -Leaf)
+        # Compute the destination path by combining the offboard folder path and the last part of the effective home directory.
+        $destinationPath = Join-Path -Path $fs_offboardFolder -ChildPath (Split-Path -Path $effective_homedirectory -Leaf)
 
-    # Execute the transfer job on the fileserver
+        # Execute the transfer job on the fileserver, passing necessary arguments.
         Invoke-Command -ComputerName $fileserver -ScriptBlock $fs_jobexecute -ArgumentList $effective_homedirectory, $destinationPath -AsJob -JobName "FS_TransferJob"
         $fs_jobStarted = $true
         
-        # Turn Off the user's HomeDirectory config in AD
-            Set-ADUser -Identity $username -HomeDirectory $null -Server $domainController
-    
-        } else {
+        # Update the user's HomeDirectory attribute in Active Directory to reflect the move.
+        Set-ADUser -Identity $username -HomeDirectory $null -Server $domainController
+        
+    } else {
         Write-Host "Both manual_homedirectory and homedirectory are null or blank. Skipping home directory transfer..." -ForegroundColor Magenta
     }
-
 # (At the end of the script - there will be a job check to confirm the data transfer has completed before exiting the script)
     $fs_job = get-job -name FS_TransferJob
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -398,13 +410,12 @@
 #>
 #------------------------------------------------------------------------------------------------------------------------------------
 # Hide from the Global Address List
-    Set-ADUser -Identity $username –Replace @{msExchHideFromAddressLists=$true} -Server $domainController
+    Set-ADUser -Identity $username -Replace @{msExchHideFromAddressLists=$true} -Server $domainController
     Write-Host "$username's account has been hidden from the GAL" -ForegroundColor Green
 #------------------------------------------------------------------------------------------------------------------------------------
 # Update User's AD DisplayName
 
 # Get the user's current display name and full name
-    $displayName = $user.DisplayName
     $fullName = $user.Name
 
 # Append "Offboarded - " at the beginning of the display name
@@ -416,7 +427,7 @@
     Write-Host "$newDisplayName" -ForegroundColor Yellow
 #--------------------------------------------------------------------------------------------------------------
 # Run a Delta Sync to sync the changes to MS365 - this is so when the account becomes a cloud account, attributes in AD that were just updated are synced over.
-    Invoke-Command –ComputerName $AADSyncServer –ScriptBlock {Start-ADSyncSyncCycle –PolicyType Delta}
+    Invoke-Command -ComputerName $AADSyncServer -ScriptBlock {Start-ADSyncSyncCycle -PolicyType Delta}
     
     # Pausing Script for 10 seconds. We just ran AADsync a moment ago and I want the system to catch up before AADsync is ran again.
         start-sleep 10
@@ -442,7 +453,7 @@
 #------------------------------------------------------------------------------------------------------------------------------------
 # Run a Delta Sync to sync the changes to MS365
     Write-Host "AADSync Command has been Executed - Standby..." -ForegroundColor Cyan
-    Invoke-Command –ComputerName $AADSyncServer –ScriptBlock {Start-ADSyncSyncCycle –PolicyType Delta}
+    Invoke-Command -ComputerName $AADSyncServer -ScriptBlock {Start-ADSyncSyncCycle -PolicyType Delta}
 
 # Wait 2 Minutes to Allow AADSync to be performed
     $delay = 120
@@ -696,7 +707,7 @@ else {
                 }
             }
 
-            if ($validatedForwarder -ne $null -and $validatedForwarder -ne "canceled") {
+            if ($null -ne $validatedForwarder -and $validatedForwarder -ne "canceled") {
                 Set-Mailbox -Identity $upn -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
                 Write-Host "$upn's emails will also forward to $validatedForwarder" -ForegroundColor Green
             } else {
@@ -735,7 +746,7 @@ else {
                 }
             }
 
-            if ($validatedDelegate -ne $null -and $validatedDelegate -ne "canceled") {
+            if ($null -ne $validatedDelegate -and $validatedDelegate -ne "canceled") {
                 Add-MailboxPermission -Identity $upn -User $validatedDelegate -AccessRights FullAccess -InheritanceType All
             }
         }
@@ -771,7 +782,7 @@ else {
                 }
             }
 
-            if ($validatedSendAs -ne $null -and $validatedSendAs -ne "canceled") {
+            if ($null -ne $validatedSendAs -and $validatedSendAs -ne "canceled") {
                 Add-RecipientPermission -Identity $upn -Trustee $validatedSendAs -AccessRights SendAs -Confirm:$false
             }
         }
@@ -836,7 +847,6 @@ else {
             Start-Sleep -Seconds 5  # Wait for 5 seconds before checking again to avoid overloading the system
         
             # Refresh job state
-                $fs_jobcheckId = $fs_job.id
                 $fs_jobState = $fs_job.state
         
             # Optionally, output the current state for monitoring

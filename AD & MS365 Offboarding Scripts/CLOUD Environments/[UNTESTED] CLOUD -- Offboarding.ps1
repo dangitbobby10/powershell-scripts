@@ -13,7 +13,7 @@
 #   █ Key Defined Variables: █
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■
 # Define the path to the "License Friendly Names Script" that transforms MS365 licenses from SKU to Friendly Names (e.g. "ENTERPRISEPACK" = "Office 365 E3")
-    $LicenseFriendlyNamesScript = #"C:\"path to..."\LicenseFriendlyNamesScript.ps1"
+    $LicenseFriendlyNamesScript = ""    #"C:\"path to..."\LicenseFriendlyNamesScript.ps1"
 
 # Define the 'Date' Variable for the CSV export file
     $date = Get-Date -Format "MM-dd-yyyy"
@@ -149,7 +149,7 @@
             }
         }
 
-        if ($validatedemail -ne $null -and $validatedemail -ne "canceled") {
+        if ($null -ne $validatedemail -and $validatedemail -ne "canceled") {
             Write-Host "($email) has been validated in MS365. The script will now begin gathering the user's details and export them to a CSV file." -ForegroundColor Green
         }
     }
@@ -216,7 +216,7 @@
     $properties['Licenses'] = $friendlyLicenseNames -join ", "
 #------------------------------------------------------------------------------------------------------------------------------------
 # Check if forwarding is enabled
-    $isForwardingEnabled = $mailbox.ForwardingSmtpAddress -ne $null
+    $isForwardingEnabled = $null -ne $mailbox.ForwardingSmtpAddress
     $currentforwardingAddress = $mailbox.ForwardingSmtpAddress
 
 # If there is forwarding, record the forwarding account
@@ -249,12 +249,12 @@
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #------------------------------------------------------------------------------------------------------------------------------------
     $finalResult = New-Object PSObject
-    $finalResult | Add-Member -MemberType NoteProperty -Name "Admin Roles" -Value $properties['Admin Roles']
     $finalResult | Add-Member -MemberType NoteProperty -Name "First Name" -Value $azure.GivenName
     $finalResult | Add-Member -MemberType NoteProperty -Name "Last Name" -Value $azure.Surname
     $finalResult | Add-Member -MemberType NoteProperty -Name "Display Name" -Value $azure.DisplayName
     $finalResult | Add-Member -MemberType NoteProperty -Name "Email Address" -Value $azure.Mail
     $finalResult | Add-Member -MemberType NoteProperty -Name "UPN" -Value $azure.UserPrincipalName
+    $finalResult | Add-Member -MemberType NoteProperty -Name "Admin Roles" -Value $properties['Admin Roles']
     $finalResult | Add-Member -MemberType NoteProperty -Name "OnlineArchive Status" -Value $mailbox.ArchiveStatus
     $finalResult | Add-Member -MemberType NoteProperty -Name "LitHold Status" -Value $mailboxStats.LitigationHoldEnabled
     $finalResult | Add-Member -MemberType NoteProperty -Name "Job Title" -Value $azure.JobTitle
@@ -294,7 +294,7 @@
 #------------------------------------------------------------------------------------------------------------------------------------
 # Reset exited user's password to something random (21 complex unique characters)
     $specialCharacters = "~!@#$%^&*"
-    $password = -join ((48..57) + (65..90) + (97..122) + [int[]][char[]]$specialCharacters | Get-Random -Count 21 | % {[char]$_})
+    $password = -join ((48..57) + (65..90) + (97..122) + [int[]][char[]]$specialCharacters | Get-Random -Count 21 | ForEach-Object {[char]$_})
     
     try {
         Set-AzureADUserPassword -ObjectId $email -Password (ConvertTo-SecureString -AsPlainText $password -Force)
@@ -413,11 +413,10 @@ if ($isMailboxOver50GB -and $isInPlaceArchiveEnabled){
                 addLicenses    = @()
                 removeLicenses = $licensesToRemove
             }
-            Set-AzureADUserLicense -ObjectId $email
-     -AssignedLicenses $body
-            Write-Host "$email's Mailbox was converted to Shared and all licenses except for E3, and/or E5 have been removed. The Mailbox is larger than 50GB and there is an In-Place Archive." -ForegroundColor Green
+            Set-AzureADUserLicense -ObjectId $email -AssignedLicenses $body
+            Write-Host "$username's Mailbox was converted to Shared and all licenses except for E3, and/or E5 have been removed. The Mailbox is larger than 50GB and there is an In-Place Archive." -ForegroundColor Green
         } else {
-            Write-Host "$email's Mailbox was converted to Shared and no licenses were removed because only E3 and/or E5 license(s) are assigned. The Mailbox is larger than 50GB and there is an In-Place Archive." -ForegroundColor Cyan
+            Write-Host "$username's Mailbox was converted to Shared and no licenses were removed because only E3 and/or E5 license(s) are assigned. The Mailbox is larger than 50GB and there is an In-Place Archive." -ForegroundColor Cyan
             }
         }
 }
@@ -440,11 +439,10 @@ elseif ($isMailboxOver50GB -and -not $isInPlaceArchiveEnabled){
                 addLicenses    = @()
                 removeLicenses = $licensesToRemove
             }
-            Set-AzureADUserLicense -ObjectId $email
-     -AssignedLicenses $body
-            Write-Host "$email's Mailbox was converted to Shared and all licenses except for E3, and/or E5 have been removed. The Mailbox is larger than 50GB" -ForegroundColor Green
+            Set-AzureADUserLicense -ObjectId $email -AssignedLicenses $body
+            Write-Host "$username's Mailbox was converted to Shared and all licenses except for E3, and/or E5 have been removed. The Mailbox is larger than 50GB" -ForegroundColor Green
         } else {
-            Write-Host "$email's Mailbox was converted to Shared and no licenses were removed because only E3 and/or E5 License(s) are assigned. The Mailbox is larger than 50GB" -ForegroundColor Cyan
+            Write-Host "$username's Mailbox was converted to Shared and no licenses were removed because only E3 and/or E5 License(s) are assigned. The Mailbox is larger than 50GB" -ForegroundColor Cyan
             }
         }
 }
@@ -467,11 +465,10 @@ elseif ($isInPlaceArchiveEnabled -and -not $isMailboxOver50GB){
                 addLicenses    = @()
                 removeLicenses = $licensesToRemove
             }
-            Set-AzureADUserLicense -ObjectId $email
-     -AssignedLicenses $body
-            Write-Host "$email's Mailbox was converted to Shared and all licenses except for E3, E5, and/or 'Exchange Online Archiving for Exchange Online' have been removed. The Mailbox has an In-Place Archive enabled" -ForegroundColor Green
+            Set-AzureADUserLicense -ObjectId $email -AssignedLicenses $body
+            Write-Host "$username's Mailbox was converted to Shared and all licenses except for E3, E5, and/or 'Exchange Online Archiving for Exchange Online' have been removed. The Mailbox has an In-Place Archive enabled" -ForegroundColor Green
         } else {
-            Write-Host "$email's Mailbox was converted to Shared and no licenses were removed because only the E3, E5, and/or 'Exchange Online Archiving for Exchange Online' License(s) were assigned. The Mailbox has an In-Place Archive enabled" -ForegroundColor Cyan
+            Write-Host "$username's Mailbox was converted to Shared and no licenses were removed because only the E3, E5, and/or 'Exchange Online Archiving for Exchange Online' License(s) were assigned. The Mailbox has an In-Place Archive enabled" -ForegroundColor Cyan
             }
         }
     }
@@ -479,16 +476,14 @@ elseif ($isInPlaceArchiveEnabled -and -not $isMailboxOver50GB){
 # 4: If Mailbox is less than 50GB and In-Place Archive is not enabled, remove all licenses
 else {
         # Strip all O365 licenses
-        $AssignedLicensesTable = Get-AzureADUser -ObjectId $email
- | Get-AzureADUserLicenseDetail | Select-Object @{n = "License"; e = { $_.SkuPartNumber } }, skuid
+        $AssignedLicensesTable = Get-AzureADUser -ObjectId $email | Get-AzureADUserLicenseDetail | Select-Object @{n = "License"; e = { $_.SkuPartNumber } }, skuid
         if ($AssignedLicensesTable) {
             $body = @{
                 addLicenses    = @()
                 removeLicenses = @($AssignedLicensesTable.skuid)
             }
-            Set-AzureADUserLicense -ObjectId $email
-     -AssignedLicenses $body
-            write-host "$email's Mailbox was converted to Shared and all Licenses have been removed" -ForegroundColor Green
+            Set-AzureADUserLicense -ObjectId $email -AssignedLicenses $body
+            write-host "$username's Mailbox was converted to Shared and all Licenses have been removed" -ForegroundColor Green
         }
     }
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -522,11 +517,11 @@ else {
                 }
             }
 
-            if ($validatedForwarder -ne $null -and $validatedForwarder -ne "canceled") {
-                Set-Mailbox -Identity $upn -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
-                Write-Host "$upn's emails will also forward to $validatedForwarder" -ForegroundColor Green
+            if ($null -ne $validatedForwarder -and $validatedForwarder -ne "canceled") {
+                Set-Mailbox -Identity $email -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
+                Write-Host "$email's emails will also forward to $validatedForwarder" -ForegroundColor Green
             } else {
-            Write-Host "No forwarding address set for $upn." -ForegroundColor Yellow
+            Write-Host "No forwarding address set for $email." -ForegroundColor Yellow
             }	
         }
     }
@@ -561,8 +556,8 @@ else {
                 }
             }
 
-            if ($validatedDelegate -ne $null -and $validatedDelegate -ne "canceled") {
-                Add-MailboxPermission -Identity $upn -User $validatedDelegate -AccessRights FullAccess -InheritanceType All
+            if ($null -ne $validatedDelegate -and $validatedDelegate -ne "canceled") {
+                Add-MailboxPermission -Identity $email -User $validatedDelegate -AccessRights FullAccess -InheritanceType All
             }
         }
     }
@@ -597,8 +592,8 @@ else {
                 }
             }
 
-            if ($validatedSendAs -ne $null -and $validatedSendAs -ne "canceled") {
-                Add-RecipientPermission -Identity $upn -Trustee $validatedSendAs -AccessRights SendAs -Confirm:$false
+            if ($null -ne $validatedSendAs -and $validatedSendAs -ne "canceled") {
+                Add-RecipientPermission -Identity $email -Trustee $validatedSendAs -AccessRights SendAs -Confirm:$false
             }
         }
     }
@@ -644,10 +639,10 @@ if ($outOfOfficeMessage -ne "") {
                 Write-Host "Error removing user $($azure.DisplayName) from distribution group $($_.DisplayName)" -ForegroundColor Magenta
             }
         }
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Write-Host "The Offboarding Script has been fully ran" -ForegroundColor Green
+#------------------------------------------------------------------------------------------------------------------------------------
+    Write-Host "The Offboarding Script has been fully ran" -ForegroundColor Green
 } # end of script loop.
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------------------------------
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 #   █ This part of the script will prompt if another user needs to be offboarded. If yes, the script will execute again. █
 #   ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
