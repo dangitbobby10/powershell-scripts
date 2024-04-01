@@ -19,7 +19,7 @@
     $date = Get-Date -Format "MM-dd-yyyy"
 
 # Define the path to the CSV file
-    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block IF you have $email in the filepath.)
+    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block if you want to keep $email and/or $date in your CSV files name.)
     $csvFilePath = { "c:\users\$env:username\desktop\Offboarding - $email $date.csv" }
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠

@@ -23,7 +23,7 @@ $domainController = ""  #"primaryDC.contoso.com"
 # Define the 'Offboarded Users' folder on the Folder server
     $fs_offboardFolder = "" #"E:\shares\secureOffboardLocation"
 
-# Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. If you don't have it configured, the script will use this variable instead.
+# Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. No need to comment variable out.
     $manual_homedirectory = "" #"E:\shares\user home folders\user's folder"
 
 # Define "Disabled Users" OU
@@ -36,7 +36,7 @@ $domainController = ""  #"primaryDC.contoso.com"
     $date = Get-Date -Format "MM-dd-yyyy"
 
 # Define the path to the CSV file
-    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block IF you have $username in the filepath.)
+    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block if you want to keep $username and/or $date in your CSV files name.)
     $csvFilePath = { "c:\users\$env:username\desktop\Offboarding - $username $date.csv" }
 #--------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -540,6 +540,28 @@ if ($mailboxDeleted) {
     catch {
         Write-Host "Error revoking refresh tokens: $_" -ForegroundColor Magenta
     }
+#--------------------------------------------------------------------------------------------------------------
+# Remove exited user from all found Admin Roles
+    # Get all AzureAD Directory Roles
+    $azureRoles = Get-AzureADDirectoryRole
+
+    # Loop through each role
+    foreach ($role in $azureRoles) {
+        # Get the members of the current role
+        $roleMembers = Get-AzureADDirectoryRoleMember -ObjectId $role.ObjectId
+        
+        # Check if the user is a member of the role
+        if ($roleMembers.ObjectId -contains $azureUser.ObjectId) {
+            try {
+                # Attempt to remove the user from the role
+                Remove-AzureADDirectoryRoleMember -ObjectId $role.ObjectId -MemberId $azureUser.ObjectId
+                Write-Host "Removed $($azureUser.UserPrincipalName) from role $($role.DisplayName)" -ForegroundColor Green
+            } catch {
+                # If an error occurs, output the error message but continue processing
+                Write-Host "Error removing $($azureUser.UserPrincipalName) from role $($role.DisplayName): Manual Intervention Required. (Consider that dynamic role assignment is a thing.) $_" -ForegroundColor Magenta
+            }
+        }
+    }    
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Convert to Shared Mailbox and wait for 2 minutes ♣

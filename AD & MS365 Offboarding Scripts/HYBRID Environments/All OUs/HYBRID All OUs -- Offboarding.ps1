@@ -28,7 +28,7 @@
 # Define the 'Offboarded Users' folder on the Folder server
     $fs_offboardFolder = "" #"E:\shares\secureOffboardLocation"
 
-# Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. If you don't have it configured, the script will use this variable instead.
+# Define the User's HomeDirectory -- If you have homedirectories configured for your users in AD, the script will use that instead of this. No need to comment variable out.
     $manual_homedirectory = "" #"E:\shares\user home folders\user's folder"
 
 # Define "Disabled Users" OU
@@ -41,7 +41,7 @@
     $date = Get-Date -Format "MM-dd-yyyy"
 
 # Define the path to the CSV file
-    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block IF you have $username in the filepath.)
+    # (only change the value insde " ". Be sure to keep { } intact as it is used later as a script block if you want to keep $username and/or $date in your CSV files name.)
     $csvFilePath = { "c:\users\$env:username\desktop\Offboarding - $username $date.csv" }
 #--------------------------------------------------------------------------------------------------------------
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
