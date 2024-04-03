@@ -336,49 +336,51 @@ $domainController = ""  #"primaryDC.contoso.com"
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
 #   ♠ Transfer User's Home Directory to the "Offboarded Users" folder on the File Server ♠
 #   ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
-# Initialize a flag to track if the job started. This helps to know whether to check for job completion later.
+    # Initialize a flag to track if the job started. This helps to know whether to check for job completion later.
     $fs_jobStarted = $false
 
-# Determine the effective home directory based on whether $manual_homedirectory is provided.
-    $effective_homedirectory = if (-not [string]::IsNullOrWhiteSpace($manual_homedirectory)) {
-        $manual_homedirectory
-    } else {
-        $homedirectory
-    }
-
-# Only proceed if an effective home directory is identified; otherwise, skip the transfer.
-    if (-not [string]::IsNullOrWhiteSpace($effective_homedirectory)) {
-        # Define the script block to be executed, including parameters for dynamic values.
-        $fs_jobexecute = {
-            param(
-                [string]$effective_homedirectory, 
-                [string]$fs_offboardFolder
-            )
-            
-            # Ensure the destination directory exists before moving.
-            if (-not (Test-Path -Path $fs_offboardFolder)) {
-                New-Item -ItemType Directory -Path $fs_offboardFolder -Force
-            }
-            
-            # Move the directory to the destination.
-            Move-Item -Path $effective_homedirectory -Destination $destinationPath
+    # Determine the effective home directory based on whether $manual_homedirectory is provided.
+        $effective_homedirectory = if (-not [string]::IsNullOrWhiteSpace($manual_homedirectory)) {
+            $manual_homedirectory
+        } else {
+            $homedirectory
         }
 
-        # Compute the destination path by combining the offboard folder path and the last part of the effective home directory.
-        $destinationPath = Join-Path -Path $fs_offboardFolder -ChildPath (Split-Path -Path $effective_homedirectory -Leaf)
+    # Compute the destination path by combining the offboard folder path and the last part of the effective home directory.
+        $destinationPath = $fs_offboardFolder #Join-Path -Path $fs_offboardFolder -ChildPath (Split-Path -Path $effective_homedirectory -Leaf)
+
+    # Only proceed if an "effective home directory" and "destination path" is identified; otherwise, skip the transfer.
+        if (-not [string]::IsNullOrWhiteSpace($effective_homedirectory) -and -not [string]::IsNullOrWhiteSpace($destinationPath)) {
+            
+            # Define the script block to be executed, including parameters for dynamic values.
+                $fs_jobexecute = {
+                    param(
+                        [string]$effective_homedirectory,
+                        [string]$destinationPath                    
+                    )
+                    
+            # Ensure the destination directory exists before moving.
+                if (-not (Test-Path -Path $destinationPath)) {
+                    New-Item -ItemType Directory -Path $destinationPath -Force
+                }
+                    
+                    # Move the directory to the destination.
+                    Move-Item -Path $effective_homedirectory -Destination $destinationPath
+                }
+
+        # Update the user's HomeDirectory attribute in Active Directory to reflect the move.
+        Set-ADUser -Identity $username -HomeDirectory $null -Server $domainController
 
         # Execute the transfer job on the fileserver, passing necessary arguments.
         Invoke-Command -ComputerName $fileserver -ScriptBlock $fs_jobexecute -ArgumentList $effective_homedirectory, $destinationPath -AsJob -JobName "FS_TransferJob"
-        $fs_jobStarted = $true
-        
-        # Update the user's HomeDirectory attribute in Active Directory to reflect the move.
-        Set-ADUser -Identity $username -HomeDirectory $null -Server $domainController
-        
-    } else {
-        Write-Host "Both manual_homedirectory and homedirectory are null or blank. Skipping home directory transfer..." -ForegroundColor Magenta
-    }
-# (At the end of the script - there will be a job check to confirm the data transfer has completed before exiting the script)
-    $fs_job = get-job -name FS_TransferJob
+        $fs_jobStarted = $true      
+
+            
+        } else {
+            Write-Host "Both manual_homedirectory and homedirectory are null or blank. Skipping home directory transfer..." -ForegroundColor Magenta
+        }
+    # (At the end of the script - there will be a job check to confirm the data transfer has completed before exiting the script)
+        $fs_job = get-job -name FS_TransferJob
 #------------------------------------------------------------------------------------------------------------------------------------
 # Change the AD Description Field to state "Disabled on (current date)"
     Set-ADUser -Identity $username -Description "Disabled on $date" -Server $domainController
@@ -439,12 +441,12 @@ $domainController = ""  #"primaryDC.contoso.com"
 
     # Move the user to the specified OU
         Move-ADObject -Identity $user.DistinguishedName -TargetPath $ou_path -ErrorAction Stop
-        Write-Host "$username's AD Account has been moved to '$ou'" -ForegroundColor Green    
+        Write-Host "$username's AD Account has been moved to '$ou_path'" -ForegroundColor Green    
     }
     
     catch {
     # Handle errors, such as user not found or lack of permissions
-        Write-Host "Error: Unable to move $username to '$ou'. Details: $_" -ForegroundColor Red
+        Write-Host "Error: Unable to move $username to '$ou_path'. Details: $_" -ForegroundColor Red
     }
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠♣♠
@@ -703,40 +705,37 @@ else {
 #   ♣ Verify and configure Forwarder - if false, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
-# Configure Forwarding
-    $forwardingAddresses = @($forwardingAddress)
-    foreach ($forwarder in $forwardingAddresses) {
-        if ($forwarder -ne "") {
-            $validatedForwarder = $null
-            while ($null -eq $validatedForwarder) {
-                $validatedForwarder = Validate-Forwarder $forwarder
-                if ($null -eq $validatedForwarder) {
+# Configure Forwarding    
+    if ($forwardingAddress -ne "") {
+        $validatedForwarder = $null
+        while ($null -eq $validatedForwarder) {
+            $validatedForwarder = Get-Mailbox -Identity $forwardingAddress | select-object -expandproperty PrimarySmtpAddress -ErrorAction silentlycontinue
+            if ($null -eq $validatedForwarder) {
 
-                [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
-                $msg = "$forwarder not found in MS365`n`n" +
-                    "Enter a valid forwarding address in MS365."
-            
-                $title = 'Retry - Configure Forwarder'
-                $default = $null  # optional default value
-                $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
+            [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
+            $msg = "$forwarder not found in MS365`n`n" +
+                "Enter a valid forwarding address in MS365."
+        
+            $title = 'Retry - Configure Forwarder'
+            $default = $null  # optional default value
+            $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
 
-                    if ([string]::IsNullOrWhiteSpace($response)) {
-                        Write-Host "Entry for address ($forwarder) canceled." -ForegroundColor Yellow
-                        $validatedForwarder = "canceled" # Use a non-null value to exit loop
-                    } else {
-                        $forwarder = $response
-                    }
+                if ([string]::IsNullOrWhiteSpace($response)) {
+                    Write-Host "Entry for address ($forwarder) canceled." -ForegroundColor Yellow
+                    $validatedForwarder = "canceled" # Use a non-null value to exit loop
+                } else {
+                    $forwarder = $response
                 }
             }
-
-            if ($null -ne $validatedForwarder -and $validatedForwarder -ne "canceled") {
-                Set-Mailbox -Identity $upn -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
-                Write-Host "$upn's emails will also forward to $validatedForwarder" -ForegroundColor Green
-            } else {
-            Write-Host "No forwarding address set for $upn." -ForegroundColor Yellow
-            }	
         }
-    }
+
+        if ($null -ne $validatedForwarder -and $validatedForwarder -ne "canceled") {
+            Set-Mailbox -Identity $email -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
+            Write-Host "$email's emails will also forward to $validatedForwarder" -ForegroundColor Green
+        } else {
+        Write-Host "No forwarding address set for $email." -ForegroundColor Yellow
+        }	
+    }    
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Verify and configure Delegates - if false, will prompt again ♣
@@ -748,7 +747,7 @@ else {
         if ($delegate -ne "") {
             $validatedDelegate = $null
             while ($null -eq $validatedDelegate) {
-                $validatedDelegate = Validate-Delegate $delegate
+                $validatedDelegate = Get-Mailbox -Identity $delegate | select-object -expandproperty PrimarySmtpAddress -ErrorAction silentlycontinue
                 if ($null -eq $validatedDelegate) {
 
                 [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
@@ -884,7 +883,7 @@ else {
         }
 
     # Clean up the job
-        Remove-Job -job $fs_job -Force
+        Remove-Job -job $fs_job -Force -ErrorAction SilentlyContinue
 
         } else {
             Write-Host "File transfer job was not initiated. Skipping job status check and cleanup." -ForegroundColor Yellow

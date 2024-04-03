@@ -491,40 +491,37 @@ else {
 #   ♣ Verify and configure Forwarder - if false, will prompt again ♣
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #------------------------------------------------------------------------------------------------------------------------------------
-# Configure Forwarding
-    $forwardingAddresses = @($forwardingAddress)
-    foreach ($forwarder in $forwardingAddresses) {
-        if ($forwarder -ne "") {
-            $validatedForwarder = $null
-            while ($null -eq $validatedForwarder) {
-                $validatedForwarder = Validate-Forwarder $forwarder
-                if ($null -eq $validatedForwarder) {
+# Configure Forwarding    
+    if ($forwardingAddress -ne "") {
+        $validatedForwarder = $null
+        while ($null -eq $validatedForwarder) {
+            $validatedForwarder = Get-Mailbox -Identity $forwardingAddress | select-object -expandproperty PrimarySmtpAddress -ErrorAction silentlycontinue
+            if ($null -eq $validatedForwarder) {
 
-                [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
-                $msg = "$forwarder not found in MS365`n`n" +
-                    "Enter a valid forwarding address in MS365."
-            
-                $title = 'Retry - Configure Forwarder'
-                $default = $null  # optional default value
-                $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
+            [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
+            $msg = "$forwarder not found in MS365`n`n" +
+                "Enter a valid forwarding address in MS365."
+        
+            $title = 'Retry - Configure Forwarder'
+            $default = $null  # optional default value
+            $response = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title, $default)
 
-                    if ([string]::IsNullOrWhiteSpace($response)) {
-                        Write-Host "Entry for address ($forwarder) canceled." -ForegroundColor Yellow
-                        $validatedForwarder = "canceled" # Use a non-null value to exit loop
-                    } else {
-                        $forwarder = $response
-                    }
+                if ([string]::IsNullOrWhiteSpace($response)) {
+                    Write-Host "Entry for address ($forwarder) canceled." -ForegroundColor Yellow
+                    $validatedForwarder = "canceled" # Use a non-null value to exit loop
+                } else {
+                    $forwarder = $response
                 }
             }
-
-            if ($null -ne $validatedForwarder -and $validatedForwarder -ne "canceled") {
-                Set-Mailbox -Identity $email -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
-                Write-Host "$email's emails will also forward to $validatedForwarder" -ForegroundColor Green
-            } else {
-            Write-Host "No forwarding address set for $email." -ForegroundColor Yellow
-            }	
         }
-    }
+
+        if ($null -ne $validatedForwarder -and $validatedForwarder -ne "canceled") {
+            Set-Mailbox -Identity $email -ForwardingSmtpAddress $validatedForwarder -DeliverToMailboxAndForward $true
+            Write-Host "$email's emails will also forward to $validatedForwarder" -ForegroundColor Green
+        } else {
+        Write-Host "No forwarding address set for $email." -ForegroundColor Yellow
+        }	
+    }    
 #------------------------------------------------------------------------------------------------------------------------------------
 #   ♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣♣
 #   ♣ Verify and configure Delegates - if false, will prompt again ♣
@@ -536,7 +533,7 @@ else {
         if ($delegate -ne "") {
             $validatedDelegate = $null
             while ($null -eq $validatedDelegate) {
-                $validatedDelegate = Validate-Delegate $delegate
+                $validatedDelegate = Get-Mailbox -Identity $delegate | select-object -expandproperty PrimarySmtpAddress -ErrorAction silentlycontinue
                 if ($null -eq $validatedDelegate) {
 
                 [Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
