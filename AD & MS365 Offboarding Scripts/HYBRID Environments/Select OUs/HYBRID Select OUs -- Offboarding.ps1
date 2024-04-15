@@ -103,12 +103,12 @@ $domainController = ""  #"primaryDC.contoso.com"
 # Add fields using the function, with updates for explicit Y positions
     $usernameBox = Add-InputField $form "Username (e.g., john.doe NOT john.doe@contoso.com):" $initialTopPosition
     $forwardingAddressBox = Add-InputField $form 'Forwarding Address:' ($usernameBox.Location.Y + 30)
-    $delegateBox1 = Add-InputField $form 'Delegate 1 (full email adderss):' ($forwardingAddressBox.Location.Y + 30)
-    $delegateBox2 = Add-InputField $form 'Delegate 2 (full email adderss):' ($delegateBox1.Location.Y + 30)
-    $delegateBox3 = Add-InputField $form 'Delegate 3 (full email adderss):' ($delegateBox2.Location.Y + 30)
-    $sendasBox1 = Add-InputField $form 'Send As 1 (full email adderss):' ($delegateBox3.Location.Y + 30)
-    $sendasBox2 = Add-InputField $form 'Send As 2 (full email adderss):' ($sendasBox1.Location.Y + 30)
-    $sendasBox3 = Add-InputField $form 'Send As 3 (full email adderss):' ($sendasBox2.Location.Y + 30)
+    $delegateBox1 = Add-InputField $form 'Delegate 1 (full email address):' ($forwardingAddressBox.Location.Y + 30)
+    $delegateBox2 = Add-InputField $form 'Delegate 2 (full email address):' ($delegateBox1.Location.Y + 30)
+    $delegateBox3 = Add-InputField $form 'Delegate 3 (full email address):' ($delegateBox2.Location.Y + 30)
+    $sendasBox1 = Add-InputField $form 'Send As 1 (full email address):' ($delegateBox3.Location.Y + 30)
+    $sendasBox2 = Add-InputField $form 'Send As 2 (full email address):' ($sendasBox1.Location.Y + 30)
+    $sendasBox3 = Add-InputField $form 'Send As 3 (full email address):' ($sendasBox2.Location.Y + 30)
     $outOfOfficeMessageBox = Add-InputField $form 'Out of Office Message:' ($sendasBox3.Location.Y + 30)
 
     $submitButton = New-Object System.Windows.Forms.Button
