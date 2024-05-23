@@ -16,7 +16,7 @@ $startTime = $currentDateTime.AddHours(-1)
 $events = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624,4625,4634; StartTime=$startTime} | ForEach-Object {
     $event = [xml]$_.ToXml()
     $username = $event.Event.EventData.Data | Where-Object {$_.Name -eq 'TargetUserName'} | Select-Object -ExpandProperty '#text'
-    if ($username -notmatch '^DWM-' -and $username -notmatch '^UMFD-' -and $username -notin @('SYSTEM', 'CCBQVWEHR01$')) {
+    if ($username -notmatch '^DWM-' -and $username -notmatch '^UMFD-' -and $username -notin @('SYSTEM', 'localhost$')) {
         [PSCustomObject]@{
             TimeGenerated = $_.TimeCreated
             EntryType     = $_.Id
