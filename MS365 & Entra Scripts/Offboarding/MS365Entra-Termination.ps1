@@ -1,12 +1,84 @@
-# Remove script parameters
 #Requires -Version 7.0
-# #Requires -Modules @{ModuleName="Microsoft.Graph"; ModuleVersion="1.0.0"}
 
-# Script: EntraTermination1.ps1 (Optimized)
+# Script: EntraTermination.ps1
 # Purpose: Automate user termination process in Microsoft Entra ID
 # Author: Bobby
 #
-# NOTE: This version only loads the minimal required Microsoft Graph submodules for faster startup. The rollup 'Microsoft.Graph' module is NOT loaded.
+# NOTE: Only loads the minimal required Microsoft Graph submodules for faster startup. The rollup 'Microsoft.Graph' module is NOT loaded.
+
+#region Script Configuration
+$logPath = Join-Path $PSScriptRoot "logs"
+$exportPath = Join-Path $PSScriptRoot "exports"
+
+if (-not (Test-Path $logPath)) {
+    New-Item -ItemType Directory -Path $logPath | Out-Null
+}
+if (-not (Test-Path $exportPath)) {
+    New-Item -ItemType Directory -Path $exportPath | Out-Null
+}
+
+$masterLogFile = Join-Path $logPath "TerminationErrors.csv"
+
+if (-not (Test-Path $masterLogFile)) {
+    $logHeader = [PSCustomObject]@{
+        "Timestamp" = "Timestamp"
+        "UserPrincipalName" = "UserPrincipalName"
+        "Function" = "Function"
+        "ErrorType" = "ErrorType"
+        "ErrorMessage" = "ErrorMessage"
+        "ErrorDetails" = "ErrorDetails"
+    }
+    $logHeader | Export-Csv -Path $masterLogFile -NoTypeInformation
+}
+#endregion
+
+#region Logging Functions
+function Write-Log {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$UserPrincipalName = "",
+        
+        [Parameter(Mandatory=$false)]
+        [string]$Function = "",
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("Error", "Warning", "Info")]
+        [string]$ErrorType = "Error",
+        
+        [Parameter(Mandatory=$false)]
+        [string]$ErrorDetails = ""
+    )
+    
+    try {
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        
+        $logEntry = [PSCustomObject]@{
+            "Timestamp" = $timestamp
+            "UserPrincipalName" = $UserPrincipalName
+            "Function" = $Function
+            "ErrorType" = $ErrorType
+            "ErrorMessage" = $Message
+            "ErrorDetails" = $ErrorDetails
+        }
+        
+        # Check if file exists and has content to avoid duplicate headers
+        if (Test-Path $masterLogFile -PathType Leaf) {
+            # File exists - append data row only (skip header)
+            $logEntry | ConvertTo-Csv -NoTypeInformation | Select-Object -Skip 1 | Add-Content -Path $masterLogFile
+        }
+        else {
+            # File doesn't exist - create with header
+            $logEntry | Export-Csv -Path $masterLogFile -NoTypeInformation
+        }
+    }
+    catch {
+        Write-Host "Failed to write to log file: $_" -ForegroundColor Red
+    }
+}
+#endregion
 
 #region Module Installation
 $requiredModules = @(
@@ -36,6 +108,7 @@ function Install-RequiredModules {
             }
             catch {
                 Write-Error "Failed to install $module. Error: $_"
+                Write-Log -Message "Failed to install module: $module" -Function "Install-RequiredModules" -ErrorType "Error" -ErrorDetails $_.Exception.Message
                 exit 1
             }
         }
@@ -45,16 +118,13 @@ function Install-RequiredModules {
     }
 }
 
-# Only install modules if they're missing
 Install-RequiredModules
 
-# Lazy load modules as needed
 function Import-ModuleIfNeeded {
     param (
         [string]$ModuleName
     )
     
-    # Check if the module is already loaded to avoid re-importing
     if (-not (Get-Module -Name $ModuleName -ErrorAction SilentlyContinue)) {
         try {
             Import-Module $ModuleName -ErrorAction Stop -WarningAction SilentlyContinue
@@ -62,6 +132,7 @@ function Import-ModuleIfNeeded {
         }
         catch {
             Write-Error "Failed to import required module '$ModuleName'. Please install it and try again."
+            Write-Log -Message "Failed to import module: $ModuleName" -Function "Import-ModuleIfNeeded" -ErrorType "Error" -ErrorDetails $_.Exception.Message
             exit 1
         }
     }
@@ -69,43 +140,27 @@ function Import-ModuleIfNeeded {
 
 #endregion
 
-#region Script Configuration
-# Add configuration variables here
-$logPath = Join-Path $PSScriptRoot "logs"
-$exportPath = Join-Path $PSScriptRoot "exports"
-
-# Create necessary directories if they don't exist
-if (-not (Test-Path $logPath)) {
-    New-Item -ItemType Directory -Path $logPath | Out-Null
-}
-if (-not (Test-Path $exportPath)) {
-    New-Item -ItemType Directory -Path $exportPath | Out-Null
-}
-#endregion
-
 #region Connection Functions
 function Connect-ToGraph {
     try {
         Write-Host "Connecting to Microsoft Graph..." -ForegroundColor Cyan
         
-        # Import required modules
         Import-ModuleIfNeeded "Microsoft.Graph.Authentication"
         Import-ModuleIfNeeded "Microsoft.Graph.Users"
         Import-ModuleIfNeeded "Microsoft.Graph.Identity.DirectoryManagement"
         Import-ModuleIfNeeded "Microsoft.Graph.Groups"
         
-        # Using interactive authentication with delegated permissions
         Write-Host "Using interactive authentication with delegated permissions..." -ForegroundColor Yellow
         Connect-MgGraph -Scopes "User.ReadWrite.All", "Group.ReadWrite.All", "Directory.ReadWrite.All", "Mail.ReadWrite", "MailboxSettings.ReadWrite", "User.ManageIdentities.All", "User.Read.All", "User.ReadWrite.All" -ErrorAction Stop
         Write-Host "✓ Connected with delegated permissions (interactive login)" -ForegroundColor Green
         
-        # Test the connection
         $testUser = Get-MgUser -Top 1 -ErrorAction Stop
         Write-Host "✓ Successfully retrieved user data" -ForegroundColor Green
         return $true
     }
     catch {
         Write-Error "Failed to connect to Microsoft Graph. Error: $_"
+        Write-Log -Message "Failed to connect to Microsoft Graph" -Function "Connect-ToGraph" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -114,13 +169,10 @@ function Connect-ToExchangeOnline {
     try {
         Write-Host "Connecting to Exchange Online..." -ForegroundColor Cyan
         
-        # Import required module
         Import-ModuleIfNeeded "ExchangeOnlineManagement"
         
-        # Exchange Online requires interactive authentication
         Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
         
-        # Test the connection
         $testMailbox = Get-Mailbox -ResultSize 1 -ErrorAction Stop
         Write-Host "✓ Successfully connected to Exchange Online" -ForegroundColor Green
         return $true
@@ -128,6 +180,7 @@ function Connect-ToExchangeOnline {
     catch {
         Write-Host "✗ Failed to connect to Exchange Online" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to connect to Exchange Online" -Function "Connect-ToExchangeOnline" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -139,6 +192,7 @@ function Disconnect-FromGraph {
     }
     catch {
         Write-Error "Error disconnecting from Microsoft Graph: $_"
+        Write-Log -Message "Error disconnecting from Microsoft Graph" -Function "Disconnect-FromGraph" -ErrorType "Warning" -ErrorDetails $_.Exception.Message
     }
 }
 
@@ -149,6 +203,7 @@ function Disconnect-FromExchangeOnline {
     }
     catch {
         Write-Error "Error disconnecting from Exchange Online: $_"
+        Write-Log -Message "Error disconnecting from Exchange Online" -Function "Disconnect-FromExchangeOnline" -ErrorType "Warning" -ErrorDetails $_.Exception.Message
     }
 }
 
@@ -161,11 +216,9 @@ function Revoke-UserSessions {
     try {
         Write-Host "Revoking active sessions for $UserPrincipalName..." -ForegroundColor Cyan
         
-        # Get the user ID
         $user = Get-MgUser -UserId $UserPrincipalName -ErrorAction Stop
         $userId = $user.Id
         
-        # Use the Microsoft Graph PowerShell cmdlet for revoking sessions
         Revoke-MgUserSignInSession -UserId $userId -ErrorAction Stop
         
         Write-Host "✓ Successfully revoked all active sessions for $UserPrincipalName" -ForegroundColor Green
@@ -174,6 +227,7 @@ function Revoke-UserSessions {
     catch {
         Write-Host "✗ Failed to revoke sessions for $UserPrincipalName" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to revoke sessions" -UserPrincipalName $UserPrincipalName -Function "Revoke-UserSessions" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -205,8 +259,6 @@ function Test-ModuleInstallation {
 #endregion
 
 #region Functions
-# Note: Password reset functionality has been removed due to AzureAD module compatibility issues on Mac
-
 function Block-UserSignIn {
     param (
         [Parameter(Mandatory=$true)]
@@ -216,27 +268,23 @@ function Block-UserSignIn {
     try {
         Write-Host "Blocking sign-in for $UserPrincipalName..." -ForegroundColor Cyan
         
-        # First, get the user ID and check their current state
         $user = Get-MgUser -UserId $UserPrincipalName -ErrorAction Stop
         $userId = $user.Id
         
         Write-Host "Found user with ID: $userId" -ForegroundColor Cyan
         Write-Host "Current account state: $($user.AccountEnabled)" -ForegroundColor Cyan
         
-        # Robust check for already disabled (boolean or string)
         if (($user.AccountEnabled -eq $false) -or ($user.AccountEnabled -eq "False")) {
             Write-Host "Account is already disabled." -ForegroundColor Yellow
             return $true
         }
         
-        # Get user's directory roles
         $userRoles = Get-MgUserMemberOf -UserId $userId -ErrorAction Stop
         $adminRoles = $userRoles | Where-Object { $_.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.directoryRole" }
         
         if ($adminRoles) {
             Write-Host "User has admin roles. Attempting to remove admin roles first..." -ForegroundColor Yellow
             
-            # First try to remove admin roles
             foreach ($role in $adminRoles) {
                 try {
                     Remove-MgDirectoryRoleMemberByRef -DirectoryRoleId $role.Id -DirectoryObjectId $userId -ErrorAction Stop
@@ -245,11 +293,11 @@ function Block-UserSignIn {
                 catch {
                     Write-Host "Warning: Could not remove admin role: $($role.DisplayName)" -ForegroundColor Yellow
                     Write-Host "Error: $_" -ForegroundColor Yellow
+                    Write-Log -Message "Could not remove admin role: $($role.DisplayName)" -UserPrincipalName $UserPrincipalName -Function "Block-UserSignIn" -ErrorType "Warning" -ErrorDetails $_.Exception.Message
                 }
             }
         }
         
-        # Block sign-in using Update-MgUser
         $params = @{
             AccountEnabled = $false
         }
@@ -264,6 +312,7 @@ function Block-UserSignIn {
         Write-Host "Error: $_" -ForegroundColor Red
         Write-Host "Error Type: $($_.Exception.GetType().FullName)" -ForegroundColor Red
         Write-Host "Error Message: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Log -Message "Failed to block sign-in" -UserPrincipalName $UserPrincipalName -Function "Block-UserSignIn" -ErrorType "Error" -ErrorDetails "$($_.Exception.GetType().FullName): $($_.Exception.Message)"
         return $false
     }
 }
@@ -277,7 +326,6 @@ function Hide-UserFromGAL {
     try {
         Write-Host "Hiding $UserPrincipalName from Global Address List using Exchange Online..." -ForegroundColor Cyan
         
-        # Hide from GAL using Exchange Online command
         Set-Mailbox -Identity $UserPrincipalName -HiddenFromAddressListsEnabled $true -ErrorAction Stop
         
         Write-Host "✓ Successfully hidden $UserPrincipalName from Global Address List" -ForegroundColor Green
@@ -286,6 +334,7 @@ function Hide-UserFromGAL {
     catch {
         Write-Host "✗ Failed to hide $UserPrincipalName from Global Address List" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to hide from Global Address List" -UserPrincipalName $UserPrincipalName -Function "Hide-UserFromGAL" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -299,7 +348,6 @@ function Convert-ToSharedMailbox {
     try {
         Write-Host "Converting $UserPrincipalName to shared mailbox..." -ForegroundColor Cyan
         
-        # Convert to shared mailbox using Exchange Online PowerShell
         Set-Mailbox -Identity $UserPrincipalName -Type Shared -ErrorAction Stop
         
         Write-Host "✓ Successfully converted $UserPrincipalName to a shared mailbox" -ForegroundColor Green
@@ -308,6 +356,7 @@ function Convert-ToSharedMailbox {
     catch {
         Write-Host "✗ Failed to convert $UserPrincipalName to a shared mailbox" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to convert to shared mailbox" -UserPrincipalName $UserPrincipalName -Function "Convert-ToSharedMailbox" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -321,21 +370,17 @@ function Rename-UserDisplayName {
     try {
         Write-Host "Renaming display name for $UserPrincipalName..." -ForegroundColor Cyan
         
-        # Get the user and current display name
         $user = Get-MgUser -UserId $UserPrincipalName -ErrorAction Stop
         $userId = $user.Id
         $currentDisplayName = $user.DisplayName
         
-        # Check if the name already contains "- Email Archive" to avoid duplication
         if ($currentDisplayName -like "*- Email Archive*") {
             Write-Host "Display name already contains '- Email Archive'. No changes needed." -ForegroundColor Yellow
             return $true
         }
         
-        # Format the new display name to "[Current Name] - Email Archive"
         $newDisplayName = "$currentDisplayName - Email Archive"
         
-        # Update the display name
         Update-MgUser -UserId $userId -DisplayName $newDisplayName -ErrorAction Stop
         
         Write-Host "✓ Successfully renamed display name to: $newDisplayName" -ForegroundColor Green
@@ -344,6 +389,7 @@ function Rename-UserDisplayName {
     catch {
         Write-Host "✗ Failed to rename display name for $UserPrincipalName" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to rename display name" -UserPrincipalName $UserPrincipalName -Function "Rename-UserDisplayName" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -360,12 +406,10 @@ function Export-UserMemberships {
     try {
         Write-Host "Exporting group memberships for $UserPrincipalName..." -ForegroundColor Cyan
         
-        # Ensure the export directory exists
         if (-not (Test-Path $ExportPath)) {
             New-Item -ItemType Directory -Path $ExportPath | Out-Null
         }
         
-        # Get user details
         $user = Get-MgUser -UserId $UserPrincipalName -ErrorAction Stop
         $userId = $user.Id
         $upnForFilename = $UserPrincipalName
@@ -374,24 +418,18 @@ function Export-UserMemberships {
         
         Write-Host "Found user with ID: $userId" -ForegroundColor Cyan
         
-        # Get group memberships
         Write-Host "Getting group memberships..." -ForegroundColor Cyan
         $groupMemberships = @()
         try {
-            # Get user's group memberships
             $groups = Get-MgUserMemberOf -UserId $userId -All -ErrorAction Stop
             
-            # Process each group
             foreach ($group in $groups) {
                 if ($group.AdditionalProperties["@odata.type"] -eq "#microsoft.graph.group") {
-                    # Get the group ID
                     $groupId = $group.Id
                     
-                    # Get group details
                     $groupDetails = Get-MgGroup -GroupId $groupId -ErrorAction SilentlyContinue
                     
                     if ($groupDetails) {
-                        # Determine group type
                         $groupType = "Security"
                         if ($groupDetails.GroupTypes -contains "Unified") {
                             $groupType = "Microsoft 365"
@@ -413,16 +451,15 @@ function Export-UserMemberships {
         }
         catch {
             Write-Host "Warning: Could not retrieve group memberships: $_" -ForegroundColor Yellow
+            Write-Log -Message "Could not retrieve group memberships" -UserPrincipalName $UserPrincipalName -Function "Export-UserMemberships" -ErrorType "Warning" -ErrorDetails $_.Exception.Message
         }
         
-        # Export to CSV
         if ($groupMemberships.Count -gt 0) {
             $groupMemberships | Export-Csv -Path $exportFile -NoTypeInformation
             Write-Host "✓ Successfully exported $($groupMemberships.Count) group memberships to: $exportFile" -ForegroundColor Green
         }
         else {
             Write-Host "No group memberships found for $UserPrincipalName" -ForegroundColor Yellow
-            # Create empty file with headers
             [PSCustomObject]@{
                 "Group Type" = ""
                 "Group Name" = ""
@@ -434,6 +471,7 @@ function Export-UserMemberships {
     catch {
         Write-Host "✗ Failed to export group memberships for $UserPrincipalName" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to export group memberships" -UserPrincipalName $UserPrincipalName -Function "Export-UserMemberships" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $null
     }
 }
@@ -450,12 +488,10 @@ function Get-LicenseFriendlyName {
         $LicenseDetails
     )
     
-    # Check cache first
     if ($script:LicenseMappingCache.ContainsKey($SkuPartNumber)) {
         return $script:LicenseMappingCache[$SkuPartNumber]
     }
     
-    # If not in cache, look up the name
     $licenseName = switch ($SkuPartNumber) {
         # Microsoft 365 and Office 365 Plans
         "O365_BUSINESS_ESSENTIALS" { "Microsoft 365 Business Basic" }
@@ -554,22 +590,18 @@ function Get-LicenseFriendlyName {
         "WINDOWS_365_E3" { "Windows 365 E3" }
         "WINDOWS_365_E5" { "Windows 365 E5" }
         
-        # New mapping
         "SPB" { "Microsoft 365 Business Premium" }
         
-        # Default case - return the original SKU if no mapping exists
         default { 
-            # Try to get the service plan name from the license details
-            $servicePlan = $license.ServicePlans | Where-Object { $_.ServicePlanId -eq $license.SkuId } | Select-Object -First 1
+            $servicePlan = $LicenseDetails.ServicePlans | Where-Object { $_.ServicePlanId -eq $LicenseDetails.SkuId } | Select-Object -First 1
             if ($servicePlan) {
                 $servicePlan.ServicePlanName
             } else {
-                $license.SkuPartNumber
+                $LicenseDetails.SkuPartNumber
             }
         }
     }
     
-    # Cache the result
     $script:LicenseMappingCache[$SkuPartNumber] = $licenseName
     return $licenseName
 }
@@ -589,14 +621,12 @@ function Export-UserLicenses {
     try {
         Write-Host "Exporting licenses for $UserPrincipalName..." -ForegroundColor Cyan
         
-        # Ensure the export directory exists
         if (-not (Test-Path $ExportPath)) {
             New-Item -ItemType Directory -Path $ExportPath | Out-Null
         }
         
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
         
-        # If an existing CSV is provided, we'll append to it, otherwise create a new one
         $exportFile = if ($ExistingCsvPath -and (Test-Path $ExistingCsvPath)) {
             $ExistingCsvPath
         } else {
@@ -604,13 +634,11 @@ function Export-UserLicenses {
             Join-Path $ExportPath "$upnForFilename-Licenses-$timestamp.csv"
         }
         
-        # Get user details
         $user = Get-MgUser -UserId $UserPrincipalName -ErrorAction Stop
         $userId = $user.Id
         
         Write-Host "Found user with ID: $userId" -ForegroundColor Cyan
         
-        # Get licenses
         Write-Host "Getting assigned licenses..." -ForegroundColor Cyan
         $licenses = @()
         try {
@@ -626,9 +654,9 @@ function Export-UserLicenses {
         }
         catch {
             Write-Host "Warning: Could not retrieve licenses: $_" -ForegroundColor Yellow
+            Write-Log -Message "Could not retrieve licenses" -UserPrincipalName $UserPrincipalName -Function "Export-UserLicenses" -ErrorType "Warning" -ErrorDetails $_.Exception.Message
         }
         
-        # Export licenses to CSV
         if ($licenses.Count -gt 0) {
             if (Test-Path $exportFile) {
                 Add-Content -Path $exportFile -Value "`n`n# User Licenses`n"
@@ -657,6 +685,7 @@ function Export-UserLicenses {
     catch {
         Write-Host "✗ Failed to export licenses for $UserPrincipalName" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to export licenses" -UserPrincipalName $UserPrincipalName -Function "Export-UserLicenses" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $null
     }
 }
@@ -670,16 +699,20 @@ function Read-OffboardingCSV {
     )
     
     try {
-        # Check if file exists
         if (-not (Test-Path $CSVPath)) {
             Write-Host "CSV file not found: $CSVPath" -ForegroundColor Red
+            Write-Log -Message "CSV file not found" -Function "Read-OffboardingCSV" -ErrorType "Error" -ErrorDetails "File path: $CSVPath"
             return $null
         }
         
-        # Import CSV
         $csvData = Import-Csv -Path $CSVPath
         
-        # Validate CSV structure (needs required columns)
+        if ($csvData.Count -eq 0) {
+            Write-Host "CSV file is empty (no data rows found)" -ForegroundColor Red
+            Write-Log -Message "CSV file is empty" -Function "Read-OffboardingCSV" -ErrorType "Error" -ErrorDetails "File path: $CSVPath"
+            return $null
+        }
+        
         $requiredColumns = @("Term_User_UPN", "Delegate1", "OOO")
         $hasRequiredColumns = $true
         
@@ -693,6 +726,7 @@ function Read-OffboardingCSV {
         if (-not $hasRequiredColumns) {
             Write-Host "Please ensure your CSV has the following columns:" -ForegroundColor Yellow
             Write-Host "Term_User_UPN, Delegate1, Delegate2, Delegate3, OOO" -ForegroundColor Yellow
+            Write-Log -Message "CSV file missing required columns" -Function "Read-OffboardingCSV" -ErrorType "Error" -ErrorDetails "Missing one or more required columns: Term_User_UPN, Delegate1, OOO"
             return $null
         }
         
@@ -701,6 +735,7 @@ function Read-OffboardingCSV {
     }
     catch {
         Write-Host "Error reading CSV file: $_" -ForegroundColor Red
+        Write-Log -Message "Error reading CSV file" -Function "Read-OffboardingCSV" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $null
     }
 }
@@ -728,6 +763,7 @@ function Create-CSVTemplate {
     }
     catch {
         Write-Host "Error creating CSV template: $_" -ForegroundColor Red
+        Write-Log -Message "Error creating CSV template" -Function "Create-CSVTemplate" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $null
     }
 }
@@ -760,7 +796,6 @@ function Add-MailboxDelegates {
     try {
         Write-Host "Adding delegates to mailbox $SharedMailboxUPN..." -ForegroundColor Cyan
         
-        # Check if we're connected to Exchange Online
         try {
             $null = Get-Mailbox -ResultSize 1 -ErrorAction Stop
         }
@@ -771,13 +806,10 @@ function Add-MailboxDelegates {
             }
         }
         
-        # Add full access permissions for each delegate
         foreach ($delegate in $delegates) {
             try {
                 Write-Host "Adding full access for $delegate..." -ForegroundColor Cyan
                 Add-MailboxPermission -Identity $SharedMailboxUPN -User $delegate -AccessRights FullAccess -InheritanceType All -AutoMapping $true -ErrorAction Stop
-                
-                # Removed SendAs permission granting as requested
                 
                 Write-Host "✓ Successfully added $delegate as a delegate with Full Access permissions" -ForegroundColor Green
                 $successCount++
@@ -785,6 +817,7 @@ function Add-MailboxDelegates {
             catch {
                 Write-Host "✗ Failed to add delegate $delegate to $SharedMailboxUPN" -ForegroundColor Red
                 Write-Host "Error: $_" -ForegroundColor Red
+                Write-Log -Message "Failed to add delegate: $delegate" -UserPrincipalName $SharedMailboxUPN -Function "Add-MailboxDelegates" -ErrorType "Error" -ErrorDetails $_.Exception.Message
             }
         }
         
@@ -793,6 +826,7 @@ function Add-MailboxDelegates {
     catch {
         Write-Host "✗ Failed to add delegates to $SharedMailboxUPN" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to add delegates" -UserPrincipalName $SharedMailboxUPN -Function "Add-MailboxDelegates" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -809,7 +843,6 @@ function Set-OutOfOfficeMessage {
     try {
         Write-Host "Setting out of office message for $UserPrincipalName..." -ForegroundColor Cyan
         
-        # Set automatic replies (out of office)
         Set-MailboxAutoReplyConfiguration -Identity $UserPrincipalName -AutoReplyState Enabled -InternalMessage $Message -ExternalMessage $Message -ErrorAction Stop
         
         Write-Host "✓ Successfully set out of office message for $UserPrincipalName" -ForegroundColor Green
@@ -818,6 +851,7 @@ function Set-OutOfOfficeMessage {
     catch {
         Write-Host "✗ Failed to set out of office message for $UserPrincipalName" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "Failed to set out of office message" -UserPrincipalName $UserPrincipalName -Function "Set-OutOfOfficeMessage" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
@@ -848,7 +882,6 @@ function Start-UserTermination {
         [switch]$SkipExport
     )
     
-    # Step 1: Check if user exists
     Write-Host "`n==== Starting termination process for $UserPrincipalName ====`n" -ForegroundColor Cyan
     
     try {
@@ -856,34 +889,21 @@ function Start-UserTermination {
         $user = Get-MgUser -UserId $UserPrincipalName -ErrorAction Stop
         Write-Host "✓ User found: $($user.DisplayName)" -ForegroundColor Green
         
-        # Step A: Export user information if not skipped
         if (-not $SkipExport) {
-            # Export group memberships
             $exportFile = Export-UserMemberships -UserPrincipalName $UserPrincipalName
             
-            # Export license information
             if ($exportFile) {
                 Export-UserLicenses -UserPrincipalName $UserPrincipalName -ExistingCsvPath $exportFile
             }
         }
         
-        # Step 3: Perform termination actions
         $results = @{}
         
-        # Block sign-in
         $results.SignInBlocked = Block-UserSignIn -UserPrincipalName $UserPrincipalName
-        
-        # Revoke active sessions
         $results.SessionsRevoked = Revoke-UserSessions -UserPrincipalName $UserPrincipalName
-        
-        # Rename display name
         $results.DisplayNameChanged = Rename-UserDisplayName -UserPrincipalName $UserPrincipalName
-        
-        # Exchange Online operations
-        # Hide from GAL
         $results.HiddenFromGAL = Hide-UserFromGAL -UserPrincipalName $UserPrincipalName
         
-        # Set out of office message if provided and not empty
         if (-not [string]::IsNullOrWhiteSpace($OutOfOfficeMessage)) {
             $results.OutOfOfficeSet = Set-OutOfOfficeMessage -UserPrincipalName $UserPrincipalName -Message $OutOfOfficeMessage
         }
@@ -892,11 +912,9 @@ function Start-UserTermination {
             Write-Host "Out of Office message not set (blank in CSV)" -ForegroundColor Yellow
         }
         
-        # Convert to shared mailbox if not skipped
         if (-not $SkipConvertToShared) {
             $results.ConvertedToShared = Convert-ToSharedMailbox -UserPrincipalName $UserPrincipalName
             
-            # Add delegates if mailbox is converted to shared and delegates are provided
             if ($results.ConvertedToShared -and 
                 (-not [string]::IsNullOrWhiteSpace($Delegate1) -or 
                  -not [string]::IsNullOrWhiteSpace($Delegate2) -or 
@@ -909,7 +927,6 @@ function Start-UserTermination {
             $results.DelegatesAdded = $false
         }
         
-        # Step 4: Summarize results
         Write-Host "`n==== Termination Results for $UserPrincipalName ====`n" -ForegroundColor Cyan
         
         Write-Host "Sign-In Blocked: $($results.SignInBlocked ? '✓' : '✗')" -ForegroundColor ($results.SignInBlocked ? 'Green' : 'Red')
@@ -949,31 +966,27 @@ function Start-UserTermination {
     catch {
         Write-Host "✗ User not found or cannot be accessed: $UserPrincipalName" -ForegroundColor Red
         Write-Host "Error: $_" -ForegroundColor Red
+        Write-Log -Message "User not found or cannot be accessed" -UserPrincipalName $UserPrincipalName -Function "Start-UserTermination" -ErrorType "Error" -ErrorDetails $_.Exception.Message
         return $false
     }
 }
 
 function Main {
-    # Test mode for sign-in blocking
     if ($args -contains "-TestBlock") {
         Write-Host "Running in test mode for sign-in blocking..." -ForegroundColor Cyan
         
-        # Establish connections
         Write-Host "Establishing required connections..." -ForegroundColor Cyan
         
-        # Connect to Microsoft Graph
         $connectedToGraph = Connect-ToGraph
         if (!$connectedToGraph) {
             Write-Host "✗ Failed to connect to Microsoft Graph. Cannot proceed with test." -ForegroundColor Red
             return
         }
         
-        # Get user to test
         $testUser = Read-Host "Enter the UPN of the user to test blocking (e.g., user@domain.com)"
         
         Write-Host "`nTesting sign-in blocking for $testUser..." -ForegroundColor Cyan
         
-        # Test the blocking
         $result = Block-UserSignIn -UserPrincipalName $testUser
         
         if ($result) {
@@ -985,20 +998,16 @@ function Main {
         return
     }
 
-    # Main script execution - processing users from CSV
     $csvPath = Join-Path $PSScriptRoot "Term_User.csv"
 
-    # Establish connections at the start
     Write-Host "Establishing required connections..." -ForegroundColor Cyan
 
-    # Connect to Microsoft Graph
     $connectedToGraph = Connect-ToGraph
     if (!$connectedToGraph) {
         Write-Host "✗ Failed to connect to Microsoft Graph. Cannot proceed with termination." -ForegroundColor Red
         return
     }
 
-    # Connect to Exchange Online
     $connectedToExchange = Connect-ToExchangeOnline
     if (!$connectedToExchange) {
         Write-Host "✗ Failed to connect to Exchange Online. Cannot proceed with termination." -ForegroundColor Red
@@ -1007,15 +1016,36 @@ function Main {
 
     Write-Host "✓ All required connections established successfully" -ForegroundColor Green
         
-        # Check if a template CSV should be created
     if ($args -contains "-CreateTemplate") {
-            Write-Host "Creating CSV template file..." -ForegroundColor Cyan
+        Write-Host "Creating CSV template file..." -ForegroundColor Cyan
+        $templatePath = Create-CSVTemplate
+        
+        if ($templatePath) {
+            Write-Host "`nTemplate created. Please edit this file and run the script again." -ForegroundColor Green
+            
+            try {
+                Invoke-Item $templatePath
+            }
+            catch {
+                Write-Host "Could not automatically open the CSV file. Please open it manually at: $templatePath" -ForegroundColor Yellow
+            }
+        }
+        return
+    }
+        
+    Write-Host "Reading user data from Term_User.csv..." -ForegroundColor Cyan
+    $offboardingData = Read-OffboardingCSV -CSVPath $csvPath
+    
+    if (-not $offboardingData) {
+        Write-Host "`nNo valid CSV data found. Would you like to create a template CSV file? (Y/N)" -ForegroundColor Yellow
+        $createTemplate = Read-Host
+        
+        if ($createTemplate -eq "Y" -or $createTemplate -eq "y") {
             $templatePath = Create-CSVTemplate
             
             if ($templatePath) {
                 Write-Host "`nTemplate created. Please edit this file and run the script again." -ForegroundColor Green
                 
-                # Try to open the template file
                 try {
                     Invoke-Item $templatePath
                 }
@@ -1023,54 +1053,26 @@ function Main {
                     Write-Host "Could not automatically open the CSV file. Please open it manually at: $templatePath" -ForegroundColor Yellow
                 }
             }
+        }
         return
-        }
+    }
         
-        # Read the CSV data
-        Write-Host "Reading user data from Term_User.csv..." -ForegroundColor Cyan
-        $offboardingData = Read-OffboardingCSV -CSVPath $csvPath
+    $totalUsers = $offboardingData.Count
+    $currentUser = 0
+    
+    foreach ($userData in $offboardingData) {
+        $currentUser++
+        Write-Host "`n[$currentUser/$totalUsers] Processing user: $($userData.Term_User_UPN)" -ForegroundColor Cyan
         
-        if (-not $offboardingData) {
-            # If the CSV doesn't exist or has invalid format, offer to create a template
-            Write-Host "`nNo valid CSV data found. Would you like to create a template CSV file? (Y/N)" -ForegroundColor Yellow
-            $createTemplate = Read-Host
-            
-            if ($createTemplate -eq "Y" -or $createTemplate -eq "y") {
-                $templatePath = Create-CSVTemplate
-                
-                if ($templatePath) {
-                    Write-Host "`nTemplate created. Please edit this file and run the script again." -ForegroundColor Green
-                    
-                    # Try to open the template file
-                    try {
-                        Invoke-Item $templatePath
-                    }
-                    catch {
-                        Write-Host "Could not automatically open the CSV file. Please open it manually at: $templatePath" -ForegroundColor Yellow
-                    }
-                }
-            }
-        return
-        }
-        
-        # Process each user in the CSV
-        $totalUsers = $offboardingData.Count
-        $currentUser = 0
-        
-        foreach ($userData in $offboardingData) {
-            $currentUser++
-            Write-Host "`n[$currentUser/$totalUsers] Processing user: $($userData.Term_User_UPN)" -ForegroundColor Cyan
-            
-            # Start the termination process for this user
-            Start-UserTermination `
-                -UserPrincipalName $userData.Term_User_UPN `
-                -Delegate1 $userData.Delegate1 `
-                -Delegate2 $userData.Delegate2 `
-                -Delegate3 $userData.Delegate3 `
-                -OutOfOfficeMessage $userData.OOO
-        }
-        
-        Write-Host "`nAll users processed. Termination script completed." -ForegroundColor Green
+        Start-UserTermination `
+            -UserPrincipalName $userData.Term_User_UPN `
+            -Delegate1 $userData.Delegate1 `
+            -Delegate2 $userData.Delegate2 `
+            -Delegate3 $userData.Delegate3 `
+            -OutOfOfficeMessage $userData.OOO
+    }
+    
+    Write-Host "`nAll users processed. Termination script completed." -ForegroundColor Green
 }
 
 
@@ -1080,7 +1082,6 @@ $OldWarningPreference = $WarningPreference
 $WarningPreference = 'SilentlyContinue'
 
 try {
-    # Run the main script logic
     Main
 }
 finally {
