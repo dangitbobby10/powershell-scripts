@@ -3,7 +3,7 @@
 # Script: Mailbox-Distro-Report.ps1
 # Purpose: Generate a comprehensive report of all mailboxes, distribution groups, mail-enabled security groups, 
 #          their aliases, mailbox delegate permissions (Full Access, SendAs, SendOnBehalf), mailbox size,
-#          litigation hold status, archive mailbox status, and license assignment status
+#          litigation hold status, archive mailbox status, license assignment status, and account status (ACTIVE/BLOCKED)
 # Author: Bobby
 #
 # NOTE: Only loads the minimal required Microsoft Graph submodules for faster startup. The rollup 'Microsoft.Graph' module is NOT loaded.
@@ -781,6 +781,48 @@ function Get-UserLicenseStatus {
     return $hasLicense
 }
 
+function Get-UserAccountStatus {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$UserPrincipalName
+    )
+    
+    $accountStatus = ""
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            # Use Microsoft Graph to get user account status
+            $user = Get-MgUser -UserId $UserPrincipalName -Property Id, AccountEnabled -ErrorAction Stop
+            
+            if ($user) {
+                # Check if account is enabled (ACTIVE) or disabled (BLOCKED)
+                if ($user.AccountEnabled -eq $true) {
+                    $accountStatus = "ACTIVE"
+                }
+                else {
+                    $accountStatus = "BLOCKED"
+                }
+            }
+            
+            # Success - break out of retry loop
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -ge $maxRetries) {
+                Write-Log -Message "Failed to get account status after $maxRetries attempts" -ObjectType "Mailbox" -ObjectName $UserPrincipalName -Function "Get-UserAccountStatus" -ErrorType "Warning" -ErrorDetails $_.Exception.Message
+            }
+            else {
+                Start-Sleep -Seconds 2
+            }
+        }
+    }
+    
+    return $accountStatus
+}
+
 function Export-MailboxDistroReport {
     param (
         [Parameter(Mandatory=$false)]
@@ -812,7 +854,7 @@ function Export-MailboxDistroReport {
     try {
         # First, get user mailboxes from Graph API
         Write-Host "Retrieving user mailboxes from Microsoft Graph..." -ForegroundColor Cyan
-        $allUsers = Get-MgUser -All -Property Id, DisplayName, Mail, UserPrincipalName, ProxyAddresses, OtherMails, UserType -ErrorAction Stop
+        $allUsers = Get-MgUser -All -Property Id, DisplayName, Mail, UserPrincipalName, ProxyAddresses, OtherMails, UserType, AccountEnabled -ErrorAction Stop
         $totalUsers = ($allUsers | Measure-Object).Count
         
         # Filter to only mailboxes (users with Mail property) and exclude guest accounts
@@ -834,6 +876,7 @@ function Export-MailboxDistroReport {
                 ProxyAddresses = $mailbox.ProxyAddresses
                 OtherMails = $mailbox.OtherMails
                 MailboxType = "UserMailbox"
+                AccountEnabled = $mailbox.AccountEnabled
             }
             $processedMailboxEmails[$mailbox.Mail] = $true
         }
@@ -928,6 +971,7 @@ function Export-MailboxDistroReport {
             $litigationHold = ""
             $archiveEnabled = ""
             $hasLicense = ""
+            $accountStatus = ""
             
             try {
                 # Extract all SMTP aliases (exclude primary email address)
@@ -981,6 +1025,21 @@ function Export-MailboxDistroReport {
                 
                 # Get license assignment status
                 $hasLicense = Get-UserLicenseStatus -UserPrincipalName $mailboxObj.UserPrincipalName
+                
+                # Get account status (ACTIVE/BLOCKED) - use cached value if available, otherwise fetch
+                if ($null -ne $mailboxObj.AccountEnabled) {
+                    # Use cached AccountEnabled value from initial user retrieval
+                    if ($mailboxObj.AccountEnabled -eq $true) {
+                        $accountStatus = "ACTIVE"
+                    }
+                    else {
+                        $accountStatus = "BLOCKED"
+                    }
+                }
+                else {
+                    # Fallback: fetch account status if not cached (for shared mailboxes or edge cases)
+                    $accountStatus = Get-UserAccountStatus -UserPrincipalName $mailboxObj.UserPrincipalName
+                }
             }
             catch {
                 $errorCount++
@@ -995,6 +1054,7 @@ function Export-MailboxDistroReport {
                 $litigationHold = ""
                 $archiveEnabled = ""
                 $hasLicense = ""
+                $accountStatus = ""
             }
             
             # Small delay every 100 mailboxes to avoid API rate limiting
@@ -1011,6 +1071,7 @@ function Export-MailboxDistroReport {
             $mailboxTypeLabel = if ($mailboxObj.MailboxType -eq "SharedMailbox") { "Shared Mailbox" } else { "Mailbox" }
             
             $reportData += [PSCustomObject]@{
+                "AccountStatus" = $accountStatus
                 "Type" = $mailboxTypeLabel
                 "DisplayName" = $mailboxObj.DisplayName
                 "PrimaryEmail" = $mailboxObj.PrimaryEmail
@@ -1079,6 +1140,7 @@ function Export-MailboxDistroReport {
             $aliasesString = if ($aliases.Count -gt 0) { ($aliases -join "; ") } else { "" }
             
             $reportData += [PSCustomObject]@{
+                "AccountStatus" = ""
                 "Type" = $groupType
                 "DisplayName" = $distro.DisplayName
                 "PrimaryEmail" = $distro.Mail
@@ -1150,7 +1212,7 @@ function Main {
     $connectedToExchange = Connect-ToExchangeOnline
     if (!$connectedToExchange) {
         Write-Host "⚠ Warning: Failed to connect to Exchange Online. Delegate information, mailbox size, litigation hold, and archive status will not be available." -ForegroundColor Yellow
-        Write-Host "Continuing with report generation (aliases and license information from Graph API will be available)..." -ForegroundColor Yellow
+        Write-Host "Continuing with report generation (aliases, license information, and account status from Graph API will be available)..." -ForegroundColor Yellow
     }
     
     Write-Host "✓ All required connections established successfully" -ForegroundColor Green
