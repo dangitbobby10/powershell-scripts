@@ -85,6 +85,7 @@ $requiredModules = @(
     "Microsoft.Graph.Authentication",
     "Microsoft.Graph.Identity.DirectoryManagement",
     "Microsoft.Graph.Users",
+    "Microsoft.Graph.Users.Actions",
     "Microsoft.Graph.Groups",
     "ExchangeOnlineManagement"
 )
@@ -147,6 +148,7 @@ function Connect-ToGraph {
         
         Import-ModuleIfNeeded "Microsoft.Graph.Authentication"
         Import-ModuleIfNeeded "Microsoft.Graph.Users"
+        Import-ModuleIfNeeded "Microsoft.Graph.Users.Actions"
         Import-ModuleIfNeeded "Microsoft.Graph.Identity.DirectoryManagement"
         Import-ModuleIfNeeded "Microsoft.Graph.Groups"
         
