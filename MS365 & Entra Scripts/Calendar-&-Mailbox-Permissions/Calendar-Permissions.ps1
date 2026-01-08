@@ -1,8 +1,17 @@
 # PowerShell Script for Interactive Calendar Permission Management
 # This script allows you to view and modify calendar permissions for any mailbox
+# Author: Bobby
 
-#Connect to Exchange Online
-Connect-ExchangeOnline
+# Connect to Exchange Online (with error handling and banner suppression)
+Write-Host "Connecting to Exchange Online..." -ForegroundColor Cyan
+try {
+    Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
+    Write-Host "✅ Successfully connected to Exchange Online" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Failed to connect to Exchange Online: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Please ensure you have the ExchangeOnlineManagement module installed and proper permissions." -ForegroundColor Yellow
+    exit 1
+}
 
 # Function to display calendar permissions
 function Show-CalendarPermissions {
@@ -14,7 +23,8 @@ function Show-CalendarPermissions {
     try {
         $Permissions = Get-MailboxFolderPermission -Identity "$Mailbox`:\calendar" -ErrorAction Stop
         
-        if ($Permissions.Count -eq 0) {
+        # Handle both single object and array results (Measure-Object handles null and single objects)
+        if ($null -eq $Permissions -or ($Permissions | Measure-Object).Count -eq 0) {
             Write-Host "No calendar permissions found." -ForegroundColor Yellow
             return
         }
@@ -63,7 +73,7 @@ function Show-CalendarPermissions {
     return $true
 }
 
-# Function to display delegates separately
+# Function to display delegates (used after permission updates to show delegate details)
 function Show-Delegates {
     param($Mailbox)
     
@@ -73,6 +83,7 @@ function Show-Delegates {
     try {
         $Permissions = Get-MailboxFolderPermission -Identity "$Mailbox`:\calendar" -ErrorAction Stop
         
+        # Filter for delegate permissions only
         $Delegates = $Permissions | Where-Object { 
             $_.SharingPermissionFlags -like "*Delegate*" -and 
             $_.User -notlike "Default" -and 
@@ -80,7 +91,8 @@ function Show-Delegates {
             $_.IsInherited -eq $false 
         }
         
-        if ($Delegates.Count -eq 0) {
+        # Handle both single object and array results (Measure-Object handles null and single objects)
+        if ($null -eq $Delegates -or ($Delegates | Measure-Object).Count -eq 0) {
             Write-Host "No delegates found." -ForegroundColor Yellow
             return
         }
@@ -183,10 +195,30 @@ function Set-DefaultPermission {
     }
 }
 
+# Helper function to get permission map (eliminates code duplication - used in multiple places)
+function Get-PermissionMap {
+    return @{
+        "1" = "Owner"
+        "2" = "PublishingEditor"
+        "3" = "Editor"
+        "4" = "PublishingAuthor"
+        "5" = "Author"
+        "6" = "NonEditingAuthor"
+        "7" = "Reviewer"
+        "8" = "Contributor"
+        "9" = "AvailabilityOnly"
+        "10" = "LimitedDetails"
+    }
+}
+
 # Function to display available permission levels
 function Show-PermissionLevels {
+    param(
+        [switch]$ForDelegate
+    )
+    
     Write-Host "`n📋 AVAILABLE CALENDAR PERMISSION LEVELS:" -ForegroundColor Yellow
-    Write-Host "-" * 50 -ForegroundColor Gray
+    Write-Host ("-" * 50) -ForegroundColor Gray
     
     $PermissionLevels = @{
         "1" = @{ Name = "Owner"; Description = "Full access - read, create, modify, delete all items and folders" }
@@ -201,7 +233,10 @@ function Show-PermissionLevels {
         "10" = @{ Name = "LimitedDetails"; Description = "View subject and location only --- TITLES ONLY, NO DETAILS" }
     }
     
-    foreach ($Key in $PermissionLevels.Keys | Sort-Object { [int]$_ }) {
+    # Limit to Editor or higher for delegates
+    $KeysToShow = if ($ForDelegate) { @("1", "2", "3") } else { $PermissionLevels.Keys }
+    
+    foreach ($Key in $KeysToShow | Sort-Object { [int]$_ }) {
         $Level = $PermissionLevels[$Key]
         Write-Host "  $Key. $($Level.Name)" -ForegroundColor White
         Write-Host "     $($Level.Description)" -ForegroundColor Gray
@@ -222,19 +257,19 @@ function Set-CalendarPermission {
     }
     
     try {
-        # First, check if user already has permissions
+        # Check if user already has permissions (must remove before adding new one to update)
         $ExistingPermission = Get-MailboxFolderPermission -Identity "$Mailbox`:\calendar" -User $UserUPN -ErrorAction SilentlyContinue
         
         if ($ExistingPermission) {
-            Write-Host "⚠️  User already has calendar access: $($ExistingPermission.AccessRights)" -ForegroundColor Yellow
+            Write-Host "⚠️  User already has calendar permission: $($ExistingPermission.AccessRights)" -ForegroundColor Yellow
             Write-Host "🔄 Removing existing permission..." -ForegroundColor Yellow
             
-            # Remove existing permission
+            # Remove existing permission (required before adding updated permission)
             Remove-MailboxFolderPermission -Identity "$Mailbox`:\calendar" -User $UserUPN -Confirm:$false
             Write-Host "✅ Existing permission removed" -ForegroundColor Green
         }
         
-        # Add new permission
+        # Add new permission (or updated permission if one existed)
         Write-Host "➕ Adding new permission..." -ForegroundColor Yellow
         
         if ($SharingPermissionFlags.Count -gt 0) {
@@ -295,7 +330,7 @@ function Remove-CalendarPermission {
         $ExistingPermission = Get-MailboxFolderPermission -Identity "$Mailbox`:\calendar" -User $UserUPN -ErrorAction SilentlyContinue
         
         if (-not $ExistingPermission) {
-            Write-Host "⚠️  User does not have calendar access to remove" -ForegroundColor Yellow
+            Write-Host "⚠️  User does not have calendar permission to remove" -ForegroundColor Yellow
             return $false
         }
         
@@ -332,11 +367,12 @@ do {
         continue
     }
 
-    # Verify mailbox exists
+    # Verify mailbox exists (supports user mailboxes, shared mailboxes, etc.)
     Write-Host "`n🔍 Verifying mailbox exists..." -ForegroundColor Yellow
     try {
         $MailboxCheck = Get-Mailbox -Identity $Mailbox -ErrorAction Stop
-        Write-Host "✅ Found mailbox: $($MailboxCheck.DisplayName)" -ForegroundColor Green
+        $MailboxType = if ($MailboxCheck.RecipientTypeDetails -eq "SharedMailbox") { "Shared Mailbox" } else { "Mailbox" }
+        Write-Host "✅ Found $MailboxType`: $($MailboxCheck.DisplayName) ($($MailboxCheck.PrimarySmtpAddress))" -ForegroundColor Green
     } catch {
         Write-Host "❌ Error: Could not find mailbox '$Mailbox'" -ForegroundColor Red
         Write-Host "Please verify the mailbox name and try again." -ForegroundColor Red
@@ -347,7 +383,7 @@ do {
         continue
     }
 
-    # Step 2: Show current calendar permissions and delegates
+    # Step 2: Show current calendar permissions (includes delegates marked with [DELEGATE] tag)
     Write-Host "`n📅 Step 2: Current Calendar Permissions" -ForegroundColor Yellow
     $PermissionsRetrieved = Show-CalendarPermissions -Mailbox $Mailbox
 
@@ -360,24 +396,20 @@ do {
         continue
     }
 
-    Write-Host "`n👥 Step 2b: Current Delegates" -ForegroundColor Yellow
-    Show-Delegates -Mailbox $Mailbox
-
-    Write-Host "`n🏢 Step 2c: Default Sharing Permission" -ForegroundColor Yellow
+    Write-Host "`n🏢 Step 2b: Default Sharing Permission" -ForegroundColor Yellow
     Show-DefaultPermission -Mailbox $Mailbox
 
     # Step 3: Ask what action to take
     Write-Host "`n❓ Step 3: What would you like to do?" -ForegroundColor Yellow
-    Write-Host "1. Add/Update calendar access for someone" -ForegroundColor White
-    Write-Host "2. Remove calendar access for someone" -ForegroundColor White
-    Write-Host "3. Add/Update delegate access" -ForegroundColor White
-    Write-Host "4. Remove delegate access" -ForegroundColor White
-    Write-Host "5. Set default sharing permission (Inside your organization)" -ForegroundColor White
-    Write-Host "6. Skip this mailbox (no changes)" -ForegroundColor White
+    Write-Host "1. Add/Update calendar permission" -ForegroundColor White
+    Write-Host "2. Add/Update CalendarDelegate permission" -ForegroundColor White
+    Write-Host "3. Remove calendar (and delegate) permission" -ForegroundColor White
+    Write-Host "4. Set default sharing permission" -ForegroundColor White
+    Write-Host "5. Skip this mailbox" -ForegroundColor White
 
     $ValidChoice = $false
     while (-not $ValidChoice) {
-        $ActionChoice = Read-Host "`nEnter your choice (1-6)"
+        $ActionChoice = Read-Host "`nEnter your choice (1-5)"
         
         switch ($ActionChoice) {
             "1" { 
@@ -385,28 +417,24 @@ do {
                 $ValidChoice = $true 
             }
             "2" { 
-                $Action = "Remove"
-                $ValidChoice = $true 
-            }
-            "3" { 
                 $Action = "AddDelegate"
                 $ValidChoice = $true 
             }
-            "4" { 
-                $Action = "RemoveDelegate"
+            "3" { 
+                $Action = "Remove"
                 $ValidChoice = $true 
             }
-            "5" { 
+            "4" { 
                 $Action = "SetDefault"
                 $ValidChoice = $true 
             }
-            "6" { 
+            "5" { 
                 Write-Host "`n👋 Skipping this mailbox..." -ForegroundColor Green
                 $Action = "Skip"
                 $ValidChoice = $true 
             }
             default { 
-                Write-Host "❌ Invalid choice. Please enter 1, 2, 3, 4, 5, or 6." -ForegroundColor Red
+                Write-Host "❌ Invalid choice. Please enter 1, 2, 3, 4, or 5." -ForegroundColor Red
             }
         }
     }
@@ -424,17 +452,13 @@ do {
     if ($Action -ne "SetDefault") {
         if ($Action -eq "Add" -or $Action -eq "AddDelegate") {
             if ($Action -eq "AddDelegate") {
-                Write-Host "`n👤 Step 4: Enter the delegate who needs access" -ForegroundColor Yellow
+                Write-Host "`n👤 Step 4: Enter the delegate who needs permission" -ForegroundColor Yellow
             } else {
-                Write-Host "`n👤 Step 4: Enter the user who needs access" -ForegroundColor Yellow
+                Write-Host "`n👤 Step 4: Enter the user who needs permission" -ForegroundColor Yellow
             }
             $UserUPN = Read-Host "User UPN (e.g., newuser@domain.com)"
         } else {
-            if ($Action -eq "RemoveDelegate") {
-                Write-Host "`n👤 Step 4: Enter the delegate to remove access from" -ForegroundColor Yellow
-            } else {
-                Write-Host "`n👤 Step 4: Enter the user to remove access from" -ForegroundColor Yellow
-            }
+            Write-Host "`n👤 Step 4: Enter the user to remove permission from" -ForegroundColor Yellow
             $UserUPN = Read-Host "User UPN (e.g., user@domain.com)"
         }
 
@@ -447,13 +471,18 @@ do {
             continue
         }
 
-        # Verify user exists
-        Write-Host "`n🔍 Verifying user exists..." -ForegroundColor Yellow
+        # Verify user/recipient exists (supports mailboxes, shared mailboxes, and other recipient types)
+        Write-Host "`n🔍 Verifying user/recipient exists..." -ForegroundColor Yellow
         try {
-            $UserCheck = Get-Mailbox -Identity $UserUPN -ErrorAction Stop
-            Write-Host "✅ Found user: $($UserCheck.DisplayName)" -ForegroundColor Green
+            # Try mailbox first (covers user mailboxes and shared mailboxes)
+            $UserCheck = Get-Mailbox -Identity $UserUPN -ErrorAction SilentlyContinue
+            if (-not $UserCheck) {
+                # Fallback: Try as recipient (for distribution groups, contacts, etc. that might have calendar permissions)
+                $UserCheck = Get-Recipient -Identity $UserUPN -ErrorAction Stop
+            }
+            Write-Host "✅ Found: $($UserCheck.DisplayName) ($($UserCheck.PrimarySmtpAddress))" -ForegroundColor Green
         } catch {
-            Write-Host "❌ Error: Could not find user '$UserUPN'" -ForegroundColor Red
+            Write-Host "❌ Error: Could not find user/recipient '$UserUPN'" -ForegroundColor Red
             Write-Host "Please verify the user name and try again." -ForegroundColor Red
             $Continue = Read-Host "`nWould you like to try again? (Y/N)"
             if ($Continue -ne "Y" -and $Continue -ne "y") {
@@ -471,19 +500,7 @@ do {
         $ValidChoice = $false
         while (-not $ValidChoice) {
             $Choice = Read-Host "`nEnter choice (1-10)"
-            
-            $PermissionMap = @{
-                "1" = "Owner"
-                "2" = "PublishingEditor"
-                "3" = "Editor"
-                "4" = "PublishingAuthor"
-                "5" = "Author"
-                "6" = "NonEditingAuthor"
-                "7" = "Reviewer"
-                "8" = "Contributor"
-                "9" = "AvailabilityOnly"
-                "10" = "LimitedDetails"
-            }
+            $PermissionMap = Get-PermissionMap
             
             if ($PermissionMap.ContainsKey($Choice)) {
                 $AccessLevel = $PermissionMap[$Choice]
@@ -511,33 +528,22 @@ do {
             Write-Host "`n❌ Permission update failed. Please try again." -ForegroundColor Red
         }
     } elseif ($Action -eq "AddDelegate") {
-        # Step 5: Select permission level for delegate
+        # Step 5: Select permission level for delegate (Editor or higher required)
         Write-Host "`n🔐 Step 5: Select permission level for delegate" -ForegroundColor Yellow
-        Write-Host "Note: Delegates typically need Editor or higher access" -ForegroundColor Gray
-        Show-PermissionLevels
+        Write-Host "Note: Delegates require Editor or higher permission" -ForegroundColor Gray
+        Show-PermissionLevels -ForDelegate
 
         $ValidChoice = $false
         while (-not $ValidChoice) {
-            $Choice = Read-Host "`nEnter choice (1-10)"
+            $Choice = Read-Host "`nEnter choice (1-3)"
+            $PermissionMap = Get-PermissionMap
             
-            $PermissionMap = @{
-                "1" = "Owner"
-                "2" = "PublishingEditor"
-                "3" = "Editor"
-                "4" = "PublishingAuthor"
-                "5" = "Author"
-                "6" = "NonEditingAuthor"
-                "7" = "Reviewer"
-                "8" = "Contributor"
-                "9" = "AvailabilityOnly"
-                "10" = "LimitedDetails"
-            }
-            
-            if ($PermissionMap.ContainsKey($Choice)) {
+            # Only allow choices 1-3 for delegates (Owner, PublishingEditor, Editor)
+            if ($Choice -match "^[1-3]$" -and $PermissionMap.ContainsKey($Choice)) {
                 $AccessLevel = $PermissionMap[$Choice]
                 $ValidChoice = $true
             } else {
-                Write-Host "❌ Invalid choice. Please enter a number between 1-10." -ForegroundColor Red
+                Write-Host "❌ Invalid choice. Delegates require Editor or higher. Please enter 1, 2, or 3." -ForegroundColor Red
             }
         }
 
@@ -574,25 +580,6 @@ do {
         } else {
             Write-Host "`n❌ Delegate permission update failed. Please try again." -ForegroundColor Red
         }
-    } elseif ($Action -eq "RemoveDelegate") {
-        # Remove delegate permission (same as regular remove, but shows delegate info)
-        Write-Host "`n🔧 Step 5: Removing delegate permission..." -ForegroundColor Yellow
-        $Success = Remove-CalendarPermission -Mailbox $Mailbox -UserUPN $UserUPN
-
-        if ($Success) {
-            # Step 6: Show updated permissions
-            Write-Host "`n📅 Step 6: Updated Calendar Permissions" -ForegroundColor Yellow
-            Show-CalendarPermissions -Mailbox $Mailbox
-            Show-Delegates -Mailbox $Mailbox
-            
-            Write-Host "`n🎉 DELEGATE PERMISSION REMOVAL COMPLETE!" -ForegroundColor Green
-            Write-Host ("=" * 50) -ForegroundColor Green
-            Write-Host "✅ Delegate: $UserUPN" -ForegroundColor White
-            Write-Host "✅ Action: Delegate access removed" -ForegroundColor White
-            Write-Host "✅ Mailbox: $Mailbox" -ForegroundColor White
-        } else {
-            Write-Host "`n❌ Delegate permission removal failed. Please try again." -ForegroundColor Red
-        }
     } elseif ($Action -eq "SetDefault") {
         # Step 4: Select default permission level
         Write-Host "`n🔐 Step 4: Select default sharing permission level" -ForegroundColor Yellow
@@ -603,19 +590,7 @@ do {
         $ValidChoice = $false
         while (-not $ValidChoice) {
             $Choice = Read-Host "`nEnter choice (1-10)"
-            
-            $PermissionMap = @{
-                "1" = "Owner"
-                "2" = "PublishingEditor"
-                "3" = "Editor"
-                "4" = "PublishingAuthor"
-                "5" = "Author"
-                "6" = "NonEditingAuthor"
-                "7" = "Reviewer"
-                "8" = "Contributor"
-                "9" = "AvailabilityOnly"
-                "10" = "LimitedDetails"
-            }
+            $PermissionMap = Get-PermissionMap
             
             if ($PermissionMap.ContainsKey($Choice)) {
                 $AccessLevel = $PermissionMap[$Choice]
@@ -643,7 +618,31 @@ do {
             Write-Host "`n❌ Default permission update failed. Please try again." -ForegroundColor Red
         }
     } else {
-        # Remove permission
+        # Remove permission - check if user is a delegate and show appropriate warnings
+        try {
+            $ExistingPermission = Get-MailboxFolderPermission -Identity "$Mailbox`:\calendar" -User $UserUPN -ErrorAction SilentlyContinue
+            $IsDelegate = $false
+            
+            if ($ExistingPermission -and $ExistingPermission.SharingPermissionFlags -like "*Delegate*") {
+                $IsDelegate = $true
+                Write-Host "`n⚠️  WARNING: This user has delegate permission. Removing permission will remove ALL calendar permissions." -ForegroundColor Red
+                Write-Host "   You cannot keep calendar permission without the delegate flag - it's all or nothing." -ForegroundColor Yellow
+                Write-Host "   If you want to keep calendar permission but remove delegate status, use option 1 to add regular permission first." -ForegroundColor Yellow
+                Write-Host ""
+                $Confirm = Read-Host "Are you sure you want to remove ALL calendar permissions? (Y/N)"
+                if ($Confirm -ne "Y" -and $Confirm -ne "y") {
+                    Write-Host "`n❌ Operation cancelled." -ForegroundColor Yellow
+                    $Continue = Read-Host "`nWould you like to manage another mailbox? (Y/N)"
+                    if ($Continue -ne "Y" -and $Continue -ne "y") {
+                        break
+                    }
+                    continue
+                }
+            }
+        } catch {
+            # If we can't check, proceed anyway
+        }
+        
         Write-Host "`n🔧 Step 5: Removing permission..." -ForegroundColor Yellow
         $Success = Remove-CalendarPermission -Mailbox $Mailbox -UserUPN $UserUPN
 
@@ -652,10 +651,19 @@ do {
             Write-Host "`n📅 Step 6: Updated Calendar Permissions" -ForegroundColor Yellow
             Show-CalendarPermissions -Mailbox $Mailbox
             
+            # Show delegates if this was a delegate removal
+            if ($IsDelegate) {
+                Show-Delegates -Mailbox $Mailbox
+            }
+            
             Write-Host "`n🎉 CALENDAR PERMISSION REMOVAL COMPLETE!" -ForegroundColor Green
             Write-Host ("=" * 50) -ForegroundColor Green
             Write-Host "✅ User: $UserUPN" -ForegroundColor White
-            Write-Host "✅ Action: Calendar access removed" -ForegroundColor White
+            if ($IsDelegate) {
+                Write-Host "✅ Action: Delegate permission removed" -ForegroundColor White
+            } else {
+                Write-Host "✅ Action: Calendar permission removed" -ForegroundColor White
+            }
             Write-Host "✅ Mailbox: $Mailbox" -ForegroundColor White
         } else {
             Write-Host "`n❌ Permission removal failed. Please try again." -ForegroundColor Red
@@ -670,5 +678,11 @@ do {
 
 Write-Host "`n👋 Script completed!" -ForegroundColor Cyan
 
-#Disconnect from Exchange Online
-Disconnect-ExchangeOnline
+# Disconnect from Exchange Online (with error handling - non-critical if already disconnected)
+Write-Host "`nDisconnecting from Exchange Online..." -ForegroundColor Yellow
+try {
+    Disconnect-ExchangeOnline -Confirm:$false -ErrorAction Stop
+    Write-Host "✅ Disconnected successfully" -ForegroundColor Green
+} catch {
+    Write-Host "⚠️  Warning: Error disconnecting from Exchange Online: $($_.Exception.Message)" -ForegroundColor Yellow
+}
